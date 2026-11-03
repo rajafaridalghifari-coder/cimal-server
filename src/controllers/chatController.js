@@ -21,7 +21,7 @@ const getChatResponse = async (req, res) => {
                     content: userMessage
                 }
             ],
-            model: "openai/gpt-oss-20b",", 
+            model: "openai/gpt-oss-20b",
         });
 
         res.json({ response: chatCompletion.choices[0].message.content });
