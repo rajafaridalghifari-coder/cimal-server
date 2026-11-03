@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIMAL Dashboard - Teknik Informatika UISU</title>
+    <style>
+        /* Desain Latar Belakang dan Layout */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            justify-content: center; 
+            height: 100vh; 
+        }
+        .chat-container { 
+            width: 100%; 
+            max-width: 900px; 
+            background: #fff; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+        }
+        
+        /* Bagian Header UI */
+        .header { 
+            background: #005f73; /* Warna elegan */
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            letter-spacing: 1px;
+        }
+        .status { 
+            text-align: center; 
+            padding: 8px; 
+            font-size: 0.9rem; 
+            font-weight: bold;
+            background: #fff3cd; 
+            color: #856404; 
+        }
+
+        /* Ruang Obrolan */
+        .chat-box { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            background-color: #e5ddd5; /* Warna khas background chat */
+        }
+
+        /* Desain Balon Teks (Chat Bubble) */
+        .message { 
+            max-width: 80%; 
+            padding: 15px 20px; 
+            border-radius: 12px; 
+            line-height: 1.5; 
+            font-size: 1.1rem; 
+            position: relative; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            white-space: pre-wrap;
+        }
+        .message.user { 
+            background: #d9fdd3; /* Hijau muda ala WA */
+            align-self: flex-end; 
+            border-top-right-radius: 0; 
+        }
+        .message.cimal { 
+            background: #ffffff; 
+            align-self: flex-start; 
+            border-top-left-radius: 0; 
+        }
+        
+        /* Nama Pengirim */
+        .sender { 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            margin-bottom: 8px; 
+        }
+        .message.user .sender { color: #025144; }
+        .message.cimal .sender { color: #005f73; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="header">
+            🤖 CIMAL - Asisten Akademik Teknik Informatika UISU
+        </div>
+        <div class="status" id="status-bar">Menghubungkan ke Server... ⏳</div>
+        
+        <div class="chat-box" id="chat-box">
+            <!-- Pesan pembuka bawaan -->
+            <div class="message cimal">
+                <div class="sender">CIMAL</div>
+                Sistem aktif dan siap! Silakan tekan tombol pada robot dan mulai berbicara.
+            </div>
+        </div>
+    </div>
+
+    <!-- Script WebSockets dari Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io(); // Terhubung ke server Node.js secara otomatis
+        const chatBox = document.getElementById('chat-box');
+        const statusBar = document.getElementById('status-bar');
+
+        // Indikator jika server Node.js menyala
+        socket.on('connect', () => {
+            statusBar.textContent = "🟢 Terhubung ke Sistem CIMAL";
+            statusBar.style.backgroundColor = "#d4edda";
+            statusBar.style.color = "#155724";
+        });
+
+        // Indikator jika server Node.js mati/restart
+        socket.on('disconnect', () => {
+            statusBar.textContent = "🔴 Terputus dari Server! Menunggu sambungan ulang...";
+            statusBar.style.backgroundColor = "#f8d7da";
+            statusBar.style.color = "#721c24";
+        });
+
+        // Fungsi penangkap pesan dari Node.js untuk ditampilkan ke layar
+        socket.on('chat_update', (data) => {
+            // Data yang diharapkan masuk: { sender: 'user' atau 'cimal', text: 'isi pesan' }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', data.sender);
+            
+            const senderName = data.sender === 'user' ? 'Mahasiswa' : 'CIMAL';
+            
+            messageDiv.innerHTML = `
+                <div class="sender">${senderName}</div>
+                ${data.text}
+            `;
+            
+            chatBox.appendChild(messageDiv);
+            
+            // Otomatis scroll ke pesan paling bawah setiap ada pesan baru
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    </script>
+
+</body>
+</html>
