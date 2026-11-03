@@ -7,19 +7,33 @@ const http = require('http');
 const { Server } = require('socket.io'); 
 const apiRoutes = require('./src/routes/apiRoutes.js');
 const chatRoutes = require('./src/routes/chatRoutes');
-const swaggerUi = require('swagger-ui-express'); // Tambahan untuk Swagger UI
+const swaggerUi = require('swagger-ui-express');
 
 const app = express();
-// Hugging Face Spaces secara default menggunakan port 7860, process.env.PORT akan mendeteksinya dari Docker
 const PORT = process.env.PORT || 3000; 
 
 const server = http.createServer(app);
 const io = new Server(server);
-
 app.set('io', io);
 
 // =================================================================
-// 1. KONFIGURASI SWAGGER UI
+// 1. MIDDLEWARE WAJIB (HARUS PALING ATAS!)
+// =================================================================
+app.use(cors()); 
+app.use(express.json()); // Wajib di atas agar POST JSON dari mobile app terbaca
+app.use(express.urlencoded({ extended: true }));
+
+// =================================================================
+// 2. KONFIGURASI FOLDER PUBLIK
+// =================================================================
+app.use('/public', (req, res, next) => {
+    res.setHeader('Connection', 'close');
+    next();
+});
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// =================================================================
+// 3. KONFIGURASI SWAGGER UI
 // =================================================================
 const swaggerDocument = {
   openapi: '3.0.0',
@@ -66,27 +80,20 @@ const swaggerDocument = {
   }
 };
 
-// Memasang UI Swagger di path /api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-
-app.use('/public', (req, res, next) => {
-    res.setHeader('Connection', 'close');
-    next();
-});
-app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use(cors()); 
-app.use(express.json()); 
-app.use(express.urlencoded({ extended: true }));
-app.use('/api/cimal', chatRoutes);
+// =================================================================
+// 4. ROUTING UTAMA (API)
+// =================================================================
+app.use('/api/cimal', chatRoutes); // Rute Mobile Chat
+app.use('/api', apiRoutes);        // Rute Upload Suara ESP32
 
 // =================================================================
-// 2. PINTU KHUSUS ESP32 SPEAKER (SISTEM ANTREAN / POLLING)
+// 5. PINTU KHUSUS ESP32 SPEAKER (SISTEM ANTREAN / POLLING)
 // =================================================================
 global.cimalResponseData = null; 
 
 app.get('/api/cimal-speaker', (req, res) => {
-    // Console log agar kita tahu ESP32 terhubung dan mengecek
     console.log("[WIFI] ESP32 datang mengecek data baru...");
 
     if (global.cimalResponseData && global.cimalResponseData.urls && global.cimalResponseData.urls.length > 0) {
@@ -95,25 +102,21 @@ app.get('/api/cimal-speaker', (req, res) => {
         
         console.log(`-> [INFO] Data ditemukan! Mengirim file audio dan ekspresi: [${ekspresi}] ke ESP32.`);
         
-        // Kirim response ke ESP32
         res.json({ 
             new_audio: true, 
             emotion: ekspresi, 
             urls: urlsToPlay 
         });
 
-        // Kosongkan agar ESP32 tidak memutarnya berulang-ulang saat nge-loop
         global.cimalResponseData = null; 
     } else {
-        // Jika tidak ada apa-apa
         res.json({ new_audio: false });
     }
 });
 
-// Menyambungkan rute utama ke /api (Ini biasanya untuk upload audio dari ESP32)
-app.use('/api', apiRoutes);
-
-// Menjalankan server
+// =================================================================
+// 6. MENJALANKAN SERVER
+// =================================================================
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
     console.log(`[SERVER] Robot Asisten API berjalan di port ${PORT}!`);
