@@ -1,22 +1,36 @@
 require('dotenv').config();
-const Groq = require('groq-sdk');
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+async function cekModelTersedia() {
+    const apiKey = process.env.GROQ_API_KEY;
+    
+    if (!apiKey) {
+        console.log("GROQ_API_KEY tidak ditemukan di file .env");
+        return;
+    }
 
-async function cekModelGroq() {
-    console.log("[INFO] Menghubungi server Groq untuk meminta daftar model...");
     try {
-        const response = await groq.models.list();
-        console.log("\n[SUKSES] Berikut adalah model teks yang aktif dan bisa Anda gunakan:");
+        console.log("Menghubungi server Groq untuk mengambil daftar model...\n");
         
-        // Menyaring dan menampilkan daftar ID model
-        response.data.forEach(model => {
-            console.log(`👉 ${model.id}`);
+        // Endpoint resmi Groq untuk mengecek seluruh model yang didukung akun
+        const response = await fetch("https://api.groq.com/openai/v1/models", {
+            method: 'GET',
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            }
         });
         
+        const data = await response.json();
+        
+        console.log("=== DAFTAR MODEL GROQ YANG TERSEDIA ===");
+        data.data.forEach(model => {
+            console.log(`-> ${model.id}`);
+        });
+        console.log("=======================================\n");
+        
     } catch (error) {
-        console.error("\n[ERROR]:", error.message);
+        console.error("Gagal mengambil data model:", error);
     }
 }
 
-cekModelGroq();
+cekModelTersedia();
