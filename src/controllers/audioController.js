@@ -70,21 +70,28 @@ const processAudio = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'File audio tidak ditemukan!' });
         }
 
-        const audioPath = req.file.path;
+        // PERBAIKAN 1: Ubah 'const' menjadi 'let' agar nilainya bisa kita timpa
+        let audioPath = req.file.path; 
         const originalName = req.file.originalname.toLowerCase();
 
-        // LOGIKA PINTAR: Hanya rakit WAV jika file adalah .raw murni dari ESP32
-        if (originalName.endsWith('.raw')) {
-            console.log(`[PROSES 1] Format .raw dari ESP32 terdeteksi. Merakit WAV...`);
+        // LOGIKA PINTAR: Tambahkan deteksi .pcm sesuai kodingan ESP32 terbarumu
+        if (originalName.endsWith('.raw') || originalName.endsWith('.pcm')) {
+            console.log(`[PROSES 1] Format mentah dari ESP32 terdeteksi. Merakit WAV...`);
             rakitWavSempurna(audioPath);
-            console.log(`[PROSES 1] Selesai. File berhasil dirakit menjadi WAV.`);
+            
+            // PERBAIKAN 2: Ubah nama file fisiknya menjadi .wav agar Groq mau menerimanya
+            const wavAudioPath = audioPath + '.wav';
+            fs.renameSync(audioPath, wavAudioPath);
+            audioPath = wavAudioPath; // Perbarui variabel agar Groq membaca file yang baru
+            
+            console.log(`[PROSES 1] Selesai. File berhasil dirakit dan direname menjadi WAV.`);
         } else {
             console.log(`[PROSES 1] Format umum (${originalName}) dari Postman/App terdeteksi. Melewati perakitan WAV.`);
         }
 
         console.log(`[PROSES 2] Mengirim audio ke Groq Whisper (Speech-to-Text)...`);
         const transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(audioPath),
+            file: fs.createReadStream(audioPath), // Sekarang Groq akan membaca file berakhiran .wav
             model: "whisper-large-v3",
             language: "id",
             response_format: "json"
