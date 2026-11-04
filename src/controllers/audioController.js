@@ -2,12 +2,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Groq = require('groq-sdk');
-const googleTTS = require('google-tts-api'); 
+// Menggunakan Microsoft Edge TTS untuk suara "Gadis" (Remaja Perempuan Indonesia)
+const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts'); 
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ========================================================
-// FUNGSI PERAKIT WAV
+// FUNGSI PERAKIT WAV (KHUSUS HARDWARE ESP32)
 // ========================================================
 function rakitWavSempurna(filePath) {
     const rawData = fs.readFileSync(filePath);
@@ -33,7 +34,7 @@ function rakitWavSempurna(filePath) {
 }
 
 // ========================================================
-// KONFIGURASI MULTER (PENYIMPANAN)
+// KONFIGURASI MULTER (PENYIMPANAN SEMENTARA)
 // ========================================================
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { 
@@ -44,29 +45,15 @@ const storage = multer.diskStorage({
         cb(null, uploadDir); 
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + '.wav'); 
+        // Menyimpan format asli file agar bisa dicek nanti
+        const ext = path.extname(file.originalname) || '.raw';
+        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + ext); 
     }
 });
 const upload = multer({ storage: storage });
 
-const unduhSuaraGoogle = (url, pathTujuan) => {
-    return new Promise((resolve, reject) => {
-        const { exec } = require('child_process');
-        const perintah = `curl -s -L -A "Mozilla/5.0" -o "${pathTujuan}" "${url}"`;
-        
-        exec(perintah, (error) => {
-            if (error) {
-                console.error(`[ERROR] Gagal mendownload dari Google: ${error.message}`);
-                reject(error);
-                return;
-            }
-            resolve();
-        });
-    });
-};
-
 // ========================================================
-// PROSES AUDIO (OTAK AI)
+// PROSES AUDIO (OTAK AI CIMAL)
 // ========================================================
 const processAudio = async (req, res) => {
     const io = req.app.get('io');
@@ -82,8 +69,16 @@ const processAudio = async (req, res) => {
         }
 
         const audioPath = req.file.path;
-        rakitWavSempurna(audioPath);
-        console.log(`[PROSES 1] Selesai. File berhasil dirakit menjadi WAV.`);
+        const originalName = req.file.originalname.toLowerCase();
+
+        // LOGIKA PINTAR: Hanya rakit WAV jika file adalah .raw murni dari ESP32
+        if (originalName.endsWith('.raw')) {
+            console.log(`[PROSES 1] Format .raw dari ESP32 terdeteksi. Merakit WAV...`);
+            rakitWavSempurna(audioPath);
+            console.log(`[PROSES 1] Selesai. File berhasil dirakit menjadi WAV.`);
+        } else {
+            console.log(`[PROSES 1] Format umum (${originalName}) dari Postman/App terdeteksi. Melewati perakitan WAV.`);
+        }
 
         console.log(`[PROSES 2] Mengirim audio ke Groq Whisper (Speech-to-Text)...`);
         const transcription = await groq.audio.transcriptions.create({
@@ -99,12 +94,19 @@ const processAudio = async (req, res) => {
             .replace(/cema|cimol|simal|cima/gi, "cimal");
 
         console.log(`  -> Terdengar sebagai: "${userText}"`);
+        
+        // Hapus file suara pengguna setelah diubah ke teks
         fs.unlinkSync(audioPath);
         if (io) io.emit('chat_update', { sender: 'user', text: userText });
 
         console.log(`[PROSES 3] Membaca Pangkalan Data FAQ...`);
-        const faqPath = path.join(__dirname, '../data/faq.json');
-        const faqDataString = fs.readFileSync(faqPath, 'utf8');
+        let faqDataString = "";
+        try {
+            const faqPath = path.join(__dirname, '../data/faq.json');
+            faqDataString = fs.readFileSync(faqPath, 'utf8');
+        } catch (e) {
+            console.log(`[WARNING] Data FAQ tidak ditemukan.`);
+        }
 
         console.log(`[PROSES 4] Berpikir dan mencari jawaban (Groq Qwen)...`);
         const systemPrompt = `Kamu adalah cimal, asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
@@ -149,43 +151,39 @@ const processAudio = async (req, res) => {
         if (io) io.emit('chat_update', { sender: 'cimal', text: finalAnswer });
         const teksUntukSuara = finalAnswer.replace(/[\*\#]/g, ""); 
 
-        console.log(`[PROSES 5] Mengubah teks menjadi suara (Google TTS)...`);
-        const audioData = googleTTS.getAllAudioUrls(teksUntukSuara, { 
-            lang: 'id', slow: false, host: 'https://translate.google.com', splitPunct: ',.?'
-        });
-
-        const localUrls = [];
+        console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
-        
         if (!fs.existsSync(publicFolder)) {
             fs.mkdirSync(publicFolder, { recursive: true });
         }
 
-        for (let i = 0; i < audioData.length; i++) {
-            let urlGoogle = typeof audioData[i] === 'string' ? audioData[i] : audioData[i].url;
-            
-            if (urlGoogle.startsWith('//')) {
-                urlGoogle = 'https:' + urlGoogle;
-            } else if (urlGoogle.startsWith('/')) {
-                urlGoogle = 'https://translate.google.com' + urlGoogle;
-            }
+        const namaFile = `cimal_suara_${Date.now()}.mp3`;
+        const pathFile = path.join(publicFolder, namaFile);
 
-            const namaFile = `cimal_suara_${i}.mp3`;
-            const pathFile = path.join(publicFolder, namaFile);
+        try {
+            const tts = new MsEdgeTTS();
             
-            await unduhSuaraGoogle(urlGoogle, pathFile);
+            // Setel suara ke GadisNeural (Remaja Indonesia) dengan kualitas MP3 standar untuk ESP32
+            await tts.setMetadata('id-ID-GadisNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
             
-            // Otomatis mengikuti IP laptop yang dihubungi ESP32
+            // Simpan langsung ke file
+            await tts.toFile(pathFile, teksUntukSuara);
+            
+            // Generate URL lokal yang mengarah ke file mp3 tersebut
             const urlLokal = `http://${req.headers.host}/public/${namaFile}`;
-            localUrls.push(urlLokal);
-        }
+            
+            console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
+            global.cimalResponseData = {
+                emotion: finalEmotion,
+                // Hanya butuh 1 URL karena Edge TTS menghasilkan file utuh
+                urls: [urlLokal] 
+            };
+            console.log(`  -> Sukses! File audio "Gadis" dan emosi siap dijemput ESP32.`);
 
-        console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
-        global.cimalResponseData = {
-            emotion: finalEmotion,
-            urls: localUrls
-        };
-        console.log(`  -> Sukses! File audio dan emosi siap dijemput ESP32.`);
+        } catch (ttsError) {
+            console.error("[ERROR] Gagal generate suara dari Edge TTS:", ttsError.message);
+            throw new Error("Gagal membuat suara CIMAL.");
+        }
 
         return res.status(200).json({
             status: 'success',

@@ -19,8 +19,8 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
-    "google-tts-api": "^2.0.2",
     "groq-sdk": "^1.6.0",
+    "msedge-tts": "^2.1.1",
     "multer": "^2.4.0",
     "socket.io": "^4.8.4",
     "swagger-ui-express": "^5.0.1"
