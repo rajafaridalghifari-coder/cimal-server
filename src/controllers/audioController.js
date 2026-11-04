@@ -190,7 +190,9 @@ const processAudio = async (req, res) => {
         console.log(`  -> Teks Balasan: "${finalAnswer}"`);
 
         if (io) io.emit('chat_update', { sender: 'cimal', text: finalAnswer });
-        const teksUntukSuara = finalAnswer.replace(/[\*\#]/g, ""); 
+        const teksUntukSuara = finalAnswer
+            .replace(/[\*\#]/g, "")
+            .replace(/UISU/g, "Uisu");
 
         console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
