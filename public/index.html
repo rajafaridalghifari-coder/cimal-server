@@ -1,150 +1,414 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
+  <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CIMAL Dashboard - Teknik Informatika UISU</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Pantau percakapan antara pengguna dan CIMAL secara langsung."
+    >
+    <title>CIMAL (Cerdas Informatif Mesin Automasi Layanan)</title>
     <style>
-        /* Desain Latar Belakang dan Layout */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
-            margin: 0; 
-            padding: 0; 
-            display: flex; 
-            justify-content: center; 
-            height: 100vh; 
+      :root {
+        color-scheme: light;
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        color: #142b3a;
+        background: #f7faf8;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        --teal: #087a47;
+        --teal-soft: #eaf5ef;
+        --pink: #d83da5;
+        --pink-soft: #ffedf7;
+        --muted: #718187;
+        --border: #e7eeea;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        padding: 40px 32px;
+      }
+
+      .page {
+        width: min(100%, 1320px);
+        margin: 0 auto;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 26px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(30px, 3vw, 42px);
+        font-weight: 800;
+        letter-spacing: -1.2px;
+      }
+
+      .subtitle {
+        margin: 9px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .server-label {
+        color: var(--muted);
+        font-size: 12px;
+        text-align: right;
+      }
+
+      .panel {
+        min-height: min(680px, calc(100vh - 190px));
+        padding: 26px 30px;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid rgba(20, 43, 58, 0.04);
+        border-radius: 24px;
+        box-shadow: 0 14px 40px rgba(20, 43, 58, 0.07);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 750;
+      }
+
+      .connection-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        flex: 0 0 auto;
+        padding: 9px 13px;
+        color: #87601f;
+        background: #fff7e8;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .connection-status.is-connected {
+        color: var(--teal);
+        background: var(--teal-soft);
+      }
+
+      .status-dot {
+        width: 9px;
+        height: 9px;
+        background: currentColor;
+        border-radius: 50%;
+      }
+
+      .transcripts {
+        display: flex;
+        min-height: 520px;
+        max-height: calc(100vh - 310px);
+        flex-direction: column;
+        gap: 14px;
+        padding: 24px 8px 8px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+
+      .empty-state {
+        display: grid;
+        min-height: 470px;
+        place-content: center;
+        justify-items: center;
+        gap: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .empty-icon {
+        display: grid;
+        width: 58px;
+        height: 58px;
+        place-items: center;
+        color: var(--teal);
+        background: var(--teal-soft);
+        border-radius: 19px;
+        font-size: 26px;
+      }
+
+      .empty-state strong {
+        color: #344b55;
+        font-size: 16px;
+      }
+
+      .empty-state p {
+        max-width: 400px;
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .message {
+        width: fit-content;
+        max-width: min(76%, 880px);
+        padding: 15px 18px;
+        border-radius: 18px;
+        animation: appear 180ms ease-out;
+      }
+
+      .message.user {
+        align-self: flex-start;
+        background: var(--teal-soft);
+      }
+
+      .message.cimal {
+        align-self: flex-start;
+        background: var(--pink-soft);
+      }
+
+      .message-sender {
+        margin-bottom: 6px;
+        color: var(--teal);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .message.cimal .message-sender {
+        color: var(--pink);
+      }
+
+      .message-text {
+        overflow-wrap: anywhere;
+        color: #20333e;
+        font-size: 15px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .error-banner {
+        display: none;
+        margin-top: 16px;
+        padding: 12px 14px;
+        color: #8b3838;
+        background: #fff0ef;
+        border-radius: 12px;
+        font-size: 13px;
+      }
+
+      .error-banner.is-visible {
+        display: block;
+      }
+
+      @keyframes appear {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
         }
-        .chat-container { 
-            width: 100%; 
-            max-width: 900px; 
-            background: #fff; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
-        
-        /* Bagian Header UI */
-        .header { 
-            background: #005f73; /* Warna elegan */
-            color: white; 
-            padding: 20px; 
-            text-align: center; 
-            font-size: 1.5rem; 
-            font-weight: bold; 
-            letter-spacing: 1px;
-        }
-        .status { 
-            text-align: center; 
-            padding: 8px; 
-            font-size: 0.9rem; 
-            font-weight: bold;
-            background: #fff3cd; 
-            color: #856404; 
+      }
+
+      @media (max-width: 700px) {
+        body {
+          padding: 24px 14px;
         }
 
-        /* Ruang Obrolan */
-        .chat-box { 
-            flex: 1; 
-            padding: 30px; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
-            background-color: #e5ddd5; /* Warna khas background chat */
+        .page-header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 14px;
+          margin-bottom: 18px;
         }
 
-        /* Desain Balon Teks (Chat Bubble) */
-        .message { 
-            max-width: 80%; 
-            padding: 15px 20px; 
-            border-radius: 12px; 
-            line-height: 1.5; 
-            font-size: 1.1rem; 
-            position: relative; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            white-space: pre-wrap;
+        .server-label {
+          text-align: left;
+          overflow-wrap: anywhere;
         }
-        .message.user { 
-            background: #d9fdd3; /* Hijau muda ala WA */
-            align-self: flex-end; 
-            border-top-right-radius: 0; 
+
+        .panel {
+          min-height: calc(100vh - 190px);
+          padding: 18px 14px;
+          border-radius: 19px;
         }
-        .message.cimal { 
-            background: #ffffff; 
-            align-self: flex-start; 
-            border-top-left-radius: 0; 
+
+        .panel-header {
+          align-items: flex-start;
+          flex-direction: column-reverse;
+          gap: 12px;
+          padding-bottom: 16px;
         }
-        
-        /* Nama Pengirim */
-        .sender { 
-            font-size: 0.85rem; 
-            font-weight: bold; 
-            margin-bottom: 8px; 
+
+        .transcripts {
+          min-height: 55vh;
+          max-height: 65vh;
+          padding: 18px 2px 6px;
         }
-        .message.user .sender { color: #025144; }
-        .message.cimal .sender { color: #005f73; }
+
+        .empty-state {
+          min-height: 48vh;
+          padding: 0 10px;
+        }
+
+        .message {
+          max-width: 92%;
+          padding: 13px 15px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
     </style>
-</head>
-<body>
-
-    <div class="chat-container">
-        <div class="header">
-            🤖 CIMAL - Asisten Akademik Teknik Informatika UISU
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <div>
+          <h1>CIMAL (Cerdas Informatif Mesin Automasi Layanan)</h1>
+          <p class="subtitle">
+            Teks percakapan yang dikenali dari pengguna dan CIMAL
+          </p>
         </div>
-        <div class="status" id="status-bar">Menghubungkan ke Server... ⏳</div>
-        
-        <div class="chat-box" id="chat-box">
-            <!-- Pesan pembuka bawaan -->
-            <div class="message cimal">
-                <div class="sender">CIMAL</div>
-                Sistem aktif dan siap! Silakan tekan tombol pada robot dan mulai berbicara.
-            </div>
+        <div class="server-label">
+          Server robot<br>
+          cimal-server-production.up.railway.app
         </div>
-    </div>
+      </header>
 
-    <!-- Script WebSockets dari Socket.io -->
-    <script src="/socket.io/socket.io.js"></script>
+      <section class="panel" aria-labelledby="transcript-title">
+        <div class="panel-header">
+          <div
+            class="connection-status"
+            id="connection-status"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="connection-label">Menghubungkan...</span>
+          </div>
+        </div>
+
+        <div
+          class="transcripts"
+          id="transcripts"
+          aria-live="polite"
+          aria-relevant="additions"
+        >
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon" aria-hidden="true">⌁</div>
+            <strong>Menunggu percakapan</strong>
+            <p>
+              Ucapan pengguna dan balasan CIMAL akan tampil di sini setelah
+              server mengirim event <code>chat_update</code>.
+            </p>
+          </div>
+        </div>
+        <div class="error-banner" id="connection-error" role="alert"></div>
+      </section>
+    </main>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script>
-        const socket = io(); // Terhubung ke server Node.js secara otomatis
-        const chatBox = document.getElementById('chat-box');
-        const statusBar = document.getElementById('status-bar');
+      (() => {
+        const serverUrl = "https://cimal-server-production.up.railway.app";
+        const transcripts = document.getElementById("transcripts");
+        const emptyState = document.getElementById("empty-state");
+        const status = document.getElementById("connection-status");
+        const statusLabel = document.getElementById("connection-label");
+        const errorBanner = document.getElementById("connection-error");
+        const maxMessages = 50;
 
-        // Indikator jika server Node.js menyala
-        socket.on('connect', () => {
-            statusBar.textContent = "🟢 Terhubung ke Sistem CIMAL";
-            statusBar.style.backgroundColor = "#d4edda";
-            statusBar.style.color = "#155724";
+        function setConnectionState(connected) {
+          status.classList.toggle("is-connected", connected);
+          statusLabel.textContent = connected
+            ? "CIMAL terhubung"
+            : "CIMAL tidak terhubung";
+          if (connected) errorBanner.classList.remove("is-visible");
+        }
+
+        function showMessage(payload) {
+          if (
+            !payload ||
+            typeof payload !== "object" ||
+            !["user", "cimal"].includes(payload.sender) ||
+            typeof payload.text !== "string" ||
+            !payload.text.trim()
+          ) {
+            return;
+          }
+
+          if (emptyState) emptyState.remove();
+
+          const message = document.createElement("article");
+          message.className = `message ${payload.sender}`;
+
+          const sender = document.createElement("div");
+          sender.className = "message-sender";
+          sender.textContent =
+            payload.sender === "user" ? "Pengguna berkata" : "CIMAL berkata";
+
+          const text = document.createElement("div");
+          text.className = "message-text";
+          text.textContent = payload.text.trim();
+
+          message.append(sender, text);
+          transcripts.append(message);
+
+          while (transcripts.querySelectorAll(".message").length > maxMessages) {
+            transcripts.querySelector(".message").remove();
+          }
+
+          transcripts.scrollTop = transcripts.scrollHeight;
+        }
+
+        if (typeof window.io !== "function") {
+          setConnectionState(false);
+          errorBanner.textContent =
+            "Socket.IO gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.";
+          errorBanner.classList.add("is-visible");
+          return;
+        }
+
+        const socket = window.io(serverUrl, {
+          transports: ["websocket"],
+          reconnection: true,
         });
 
-        // Indikator jika server Node.js mati/restart
-        socket.on('disconnect', () => {
-            statusBar.textContent = "🔴 Terputus dari Server! Menunggu sambungan ulang...";
-            statusBar.style.backgroundColor = "#f8d7da";
-            statusBar.style.color = "#721c24";
+        socket.on("connect", () => setConnectionState(true));
+        socket.on("disconnect", () => setConnectionState(false));
+        socket.on("connect_error", () => {
+          setConnectionState(false);
+          errorBanner.textContent =
+            "Koneksi ke server CIMAL gagal. Halaman akan mencoba menyambungkan ulang.";
+          errorBanner.classList.add("is-visible");
         });
+        socket.on("chat_update", showMessage);
 
-        // Fungsi penangkap pesan dari Node.js untuk ditampilkan ke layar
-        socket.on('chat_update', (data) => {
-            // Data yang diharapkan masuk: { sender: 'user' atau 'cimal', text: 'isi pesan' }
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', data.sender);
-            
-            const senderName = data.sender === 'user' ? 'Mahasiswa' : 'CIMAL';
-            
-            messageDiv.innerHTML = `
-                <div class="sender">${senderName}</div>
-                ${data.text}
-            `;
-            
-            chatBox.appendChild(messageDiv);
-            
-            // Otomatis scroll ke pesan paling bawah setiap ada pesan baru
-            chatBox.scrollTop = chatBox.scrollHeight;
+        window.addEventListener("pagehide", () => socket.disconnect(), {
+          once: true,
         });
+      })();
     </script>
-
-</body>
+  </body>
 </html>

@@ -99,7 +99,7 @@ const processAudio = async (req, res) => {
 
         let rawText = transcription.text;
         userText = rawText
-            .replace(/wisu|wisnu|uiso|wesu/gi, "UISU")
+            .replace(/wisu|wisnu|uiso|wesu/gi, "uisu")
             .replace(/cema|cimol|simal|cima/gi, "cimal");
 
         console.log(`  -> Terdengar sebagai: "${userText}"`);
@@ -118,16 +118,21 @@ const processAudio = async (req, res) => {
         }
 
         console.log(`[PROSES 4] Berpikir dan mencari jawaban (Groq Qwen)...`);
-        const systemPrompt = `Kamu adalah cimal, asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
+        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
+        
         Data Resmi Prodi:
         ${faqDataString}
         
         Aturan ketat:
-        1. Jawab ramah dan ringkas. Jangan mengarang informasi.
-        2. Tentukan satu emosi untuk jawaban ini: [NORMAL, HAPPY, ANGRY, CUTE].
+        1. Jawab ramah, ringkas, dan sopan. CIMAL dikembangkan oleh Tim Basudara Teknik Informatika UISU.
+        2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
+        3. Jika pertanyaan akademik TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke Tata Usaha. Set nilai "butuh_update" menjadi true.
+        4. Jika meminta data sensitif kampus, tolak demi privasi.
+        5. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
+        6. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
         
-        PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa ada teks lain, seperti ini:
-        {"emotion": "HAPPY", "jawaban": "Halo! Ada yang bisa Cimal bantu?"}`;
+        PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
+        {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
 
         const chatCompletion = await groq.chat.completions.create({
             messages: [
@@ -147,8 +152,35 @@ const processAudio = async (req, res) => {
         try {
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
+            
             finalEmotion = parsedData.emotion || "NORMAL";
             finalAnswer = parsedData.jawaban || botReplyRaw;
+
+            // LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
+            if (parsedData.butuh_update === true) {
+                const updatePath = path.join(__dirname, '../data/pembaruan_database.json');
+                let updateList = [];
+                
+                if (fs.existsSync(updatePath)) {
+                    try {
+                        updateList = JSON.parse(fs.readFileSync(updatePath, 'utf8'));
+                    } catch (e) {
+                        updateList = []; 
+                    }
+                }
+                
+                const newText = userText.toLowerCase();
+                let isDuplicate = updateList.some(existingQuestion => {
+                    const existingText = existingQuestion.toLowerCase();
+                    return existingText.includes(newText) || newText.includes(existingText);
+                });
+
+                if (!isDuplicate) {
+                    updateList.push(userText);
+                    fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
+                    console.log(`[INFO ADMIN] Audio: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userText}"`);
+                }
+            }
         } catch (parseError) {
             console.log(`[WARNING] AI tidak membalas dengan format JSON yang valid. Menggunakan teks mentah.`);
             finalAnswer = botReplyRaw;

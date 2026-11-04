@@ -94,7 +94,7 @@ app.use('/api', apiRoutes);        // Rute Upload Suara ESP32
 global.cimalResponseData = null; 
 
 app.get('/api/cimal-speaker', (req, res) => {
-    console.log("[WIFI] ESP32 datang mengecek data baru...");
+    //console.log("[WIFI] ESP32 datang mengecek data baru...");
 
     if (global.cimalResponseData && global.cimalResponseData.urls && global.cimalResponseData.urls.length > 0) {
         const urlsToPlay = global.cimalResponseData.urls;
