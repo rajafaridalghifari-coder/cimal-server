@@ -2,9 +2,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const Groq = require('groq-sdk');
-// Menggunakan Microsoft Edge TTS untuk suara "Gadis" (Remaja Perempuan Indonesia)
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts'); 
 
+// TAMBAHKAN BARIS INI UNTUK MEMPERBAIKI ERROR EDGE TTS DI RAILWAY
 global.crypto = require('crypto');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -155,12 +155,16 @@ const processAudio = async (req, res) => {
 
         console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
-        if (!fs.existsSync(publicFolder)) {
-            fs.mkdirSync(publicFolder, { recursive: true });
-        }
 
-        const namaFile = `cimal_suara_${Date.now()}.mp3`;
-        const pathFile = path.join(publicFolder, namaFile);
+        // 1. Buat ID unik untuk nama folder (bukan nama file)
+        const idUnik = Date.now();
+        const namaFolder = `cimal_suara_${idUnik}`;
+        const folderTarget = path.join(publicFolder, namaFolder);
+
+        // 2. Buat folder target tersebut di dalam folder public
+        if (!fs.existsSync(folderTarget)) {
+            fs.mkdirSync(folderTarget, { recursive: true });
+        }
 
         try {
             const tts = new MsEdgeTTS();
@@ -168,17 +172,17 @@ const processAudio = async (req, res) => {
             // Setel suara ke GadisNeural (Remaja Indonesia) dengan kualitas MP3 standar untuk ESP32
             await tts.setMetadata('id-ID-GadisNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
             
-            // Simpan langsung ke file
-            await tts.toFile(pathFile, teksUntukSuara);
+            // 3. PENTING: Masukkan PATH FOLDER (bukan path file). 
+            // msedge-tts akan otomatis membuat file bernama 'audio.mp3' di dalam folder ini.
+            await tts.toFile(folderTarget, teksUntukSuara);
             
-            // Generate URL lokal yang mengarah ke file mp3 tersebut
-            const urlLokal = `http://${req.headers.host}/public/${namaFile}`;
+            // 4. Generate URL lokal yang mengarah ke file audio.mp3 di dalam folder unik tersebut
+            const urlLokal = `http://${req.headers.host}/public/${namaFolder}/audio.mp3`;
             
             console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
             global.cimalResponseData = {
                 emotion: finalEmotion,
-                // Hanya butuh 1 URL karena Edge TTS menghasilkan file utuh
-                urls: [urlLokal] 
+                urls: [urlLokal] // URL sudah diarahkan ke file audio.mp3
             };
             console.log(`  -> Sukses! File audio "Gadis" dan emosi siap dijemput ESP32.`);
 
