@@ -1,5 +1,12 @@
 [
     {
+    "keywords" : ["Pencipta cimal", "Pembuat cimal", "developer cimal"],
+     "answer" : [
+        "Cimal dibuat oleh dua mahasiswa program studi teknik informatika universitas islam sumatera utara (UISU) stambuk 23, robot IoT cimal dibuat oleh Cindi Aulia Siregar dan Aplikasi chat cimal dibuat oleh Raja Farid Al-ghifari. Cimal adalah singkatan dari Cerdas Informatif Mesin Automasi Layanan.",
+        "cimal merupakan hasil dari tugas akhir yang di bimbing oleh bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. dan bapak Rachmat Aulia, S.Kom., M.Sc.IT. Cimal dibuat untuk membantu mahasiswa prodi teknik informatika UISU dalam mendapatkan informasi akademik secara cepat dan akurat."
+     ]
+    },
+    {
         "keywords": ["kaprodi", "ketua program studi"],
         "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
     },
