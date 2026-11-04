@@ -5,6 +5,8 @@ const Groq = require('groq-sdk');
 // Menggunakan Microsoft Edge TTS untuk suara "Gadis" (Remaja Perempuan Indonesia)
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts'); 
 
+global.crypto = require('crypto');
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ========================================================
