@@ -35,64 +35,88 @@ const getChatResponse = async (req, res) => {
         4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
         6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
-        7. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
         
         PENTING! Balas HANYA dengan format JSON murni:
         {"jawaban": "isi jawaban teks yang rapi di sini", "butuh_update": false}`;
 
-        console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Groq Qwen)...`);
+        let finalAnswer = "";
+        let butuhUpdate = false;
 
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage }
-            ],
-            model: "qwen/qwen3.8-27b", 
-            temperature: 0.2, 
-            max_tokens: 800,
-        });
-
-        const botReplyRaw = chatCompletion.choices[0].message.content;
-        let finalAnswer = botReplyRaw;
-        
-        // 3. PARSING JSON DAN LOGIKA PEMBARUAN DATABASE
+        // 3. PROSES AI DENGAN FITUR KEBAL LIMIT (FALLBACK LOKAL)
         try {
+            console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Groq Qwen)...`);
+            const chatCompletion = await groq.chat.completions.create({
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userMessage }
+                ],
+                model: "qwen/qwen3.8-27b", 
+                temperature: 0.2, 
+                max_tokens: 800,
+            });
+
+            const botReplyRaw = chatCompletion.choices[0].message.content;
+            
+            // Parsing JSON dari Groq
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
             
             finalAnswer = parsedData.jawaban || botReplyRaw;
+            butuhUpdate = parsedData.butuh_update || false;
 
-            // LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
-            if (parsedData.butuh_update === true) {
-                const updatePath = path.join(__dirname, '../data/pembaruan_database.json');
-                let updateList = [];
-                
-                if (fs.existsSync(updatePath)) {
-                    try {
-                        updateList = JSON.parse(fs.readFileSync(updatePath, 'utf8'));
-                    } catch (e) {
-                        updateList = []; 
+        } catch (apiError) {
+            // JIKA GROQ API ERROR / KENA LIMIT, JALANKAN MODE LOKAL
+            console.error(`[WARNING] Groq API (Chat) Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            
+            let jawabanDitemukan = "Mohon maaf, sistem AI Cimal sedang mengalami gangguan jaringan atau kelebihan muatan. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            
+            try {
+                const faqList = JSON.parse(faqDataString);
+                const userTeksLower = userMessage.toLowerCase();
+
+                for (let item of faqList) {
+                    const tanyaLower = item.pertanyaan.toLowerCase();
+                    if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
+                        jawabanDitemukan = item.jawaban;
+                        break;
                     }
                 }
-                
-                const newText = userMessage.toLowerCase();
-                let isDuplicate = updateList.some(existingQuestion => {
-                    const existingText = existingQuestion.toLowerCase();
-                    return existingText.includes(newText) || newText.includes(existingText);
-                });
+            } catch (faqError) {
+                console.error("Gagal membaca faq.json di mode lokal (Chat).");
+            }
 
-                if (!isDuplicate) {
-                    updateList.push(userMessage);
-                    fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
-                    console.log(`[INFO ADMIN] Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userMessage}"`);
+            finalAnswer = jawabanDitemukan;
+        }
+        
+        // 4. LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
+        if (butuhUpdate === true || finalAnswer.includes("mengalami gangguan")) {
+            const updatePath = path.join(__dirname, '../data/pembaruan_database.json');
+            let updateList = [];
+            
+            if (fs.existsSync(updatePath)) {
+                try {
+                    updateList = JSON.parse(fs.readFileSync(updatePath, 'utf8'));
+                } catch (e) {
+                    updateList = []; 
                 }
             }
-        } catch (parseError) {
-            console.log(`[WARNING] AI membalas tanpa JSON valid. Teks: ${botReplyRaw}`);
-        }
+            
+            const newText = userMessage.toLowerCase();
+            let isDuplicate = updateList.some(existingQuestion => {
+                const existingText = existingQuestion.toLowerCase();
+                return existingText.includes(newText) || newText.includes(existingText);
+            });
+
+            if (!isDuplicate) {
+                updateList.push(userMessage);
+                fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
+                console.log(`[INFO ADMIN] Chat: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userMessage}"`);
+            }
+        } 
 
         console.log(`[CHAT TEKS] Jawaban berhasil dibuat: "${finalAnswer.substring(0, 50)}..."`);
         res.json({ response: finalAnswer });
+        
     } catch (error) {
         console.error("Error pada Groq API (Chat):", error);
         res.status(500).json({ error: "Terjadi kesalahan pada server AI CIMAL." });

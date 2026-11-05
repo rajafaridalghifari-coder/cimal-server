@@ -1,14 +1,13 @@
 [
     {
     "keywords" : ["Pencipta cimal", "Pembuat cimal", "developer cimal"],
-     "answer" : [
-        "Cimal dibuat oleh dua mahasiswa program studi teknik informatika universitas islam sumatera utara (UISU) stambuk 23, robot IoT cimal dibuat oleh Cindi Aulia Siregar dan Aplikasi chat cimal dibuat oleh Raja Farid Al-ghifari. Cimal adalah singkatan dari Cerdas Informatif Mesin Automasi Layanan. Cimal merupakan hasil dari tugas akhir yang di bimbing oleh bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. dan bapak Rachmat Aulia, S.Kom., M.Sc.IT. Cimal dibuat untuk membantu mahasiswa prodi teknik informatika UISU dalam mendapatkan informasi akademik secara cepat dan akurat."
-     ]
+     "answer" : "Cimal dibuat oleh dua mahasiswa program studi teknik informatika universitas islam sumatera utara (UISU) stambuk 23, robot IoT cimal dibuat oleh Cindi Aulia Siregar dan Aplikasi chat cimal dibuat oleh Raja Farid Al-ghifari. Cimal adalah singkatan dari Cerdas Informatif Mesin Automasi Layanan. Cimal merupakan hasil dari tugas akhir yang di bimbing oleh bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. dan bapak Rachmat Aulia, S.Kom., M.Sc.IT. Cimal dibuat untuk membantu mahasiswa prodi teknik informatika UISU dalam mendapatkan informasi akademik secara cepat dan akurat."
+
     },
     {
         "keywords" : ["Fun fact cimal", "asal usul cimal yang sebenarnya", "aku Cindi Aulia Siregar yang Cantik"],
         "answer" : " nama cimal sebenarnya adalah singkatan cindi dan akmal, nama cimal sendiri dicetuskan oleh akmal yang menginspirasi cindi untuk memberikan nama cimal ke robot Iot tugas akhir cindi karena cindi sangat menyukai nama ini."
-    }
+    },
     {
         "keywords": ["kaprodi", "ketua program studi"],
         "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
@@ -18,7 +17,6 @@
         "answer": "staff akademik program studi teknik informatika adalah abangda Habibi Lubis, S.E."
     },
     {
-
         "keywords": ["kaprodi", "ketua program studi"],
         "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
     },

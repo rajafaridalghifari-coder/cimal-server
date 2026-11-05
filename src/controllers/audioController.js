@@ -70,7 +70,6 @@ const processAudio = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'File audio tidak ditemukan!' });
         }
 
-        // PERBAIKAN 1: Ubah 'const' menjadi 'let' agar nilainya bisa kita timpa
         let audioPath = req.file.path; 
         const originalName = req.file.originalname.toLowerCase();
 
@@ -79,10 +78,9 @@ const processAudio = async (req, res) => {
             console.log(`[PROSES 1] Format mentah dari ESP32 terdeteksi. Merakit WAV...`);
             rakitWavSempurna(audioPath);
             
-            // PERBAIKAN 2: Ubah nama file fisiknya menjadi .wav agar Groq mau menerimanya
             const wavAudioPath = audioPath + '.wav';
             fs.renameSync(audioPath, wavAudioPath);
-            audioPath = wavAudioPath; // Perbarui variabel agar Groq membaca file yang baru
+            audioPath = wavAudioPath; 
             
             console.log(`[PROSES 1] Selesai. File berhasil dirakit dan direname menjadi WAV.`);
         } else {
@@ -91,7 +89,7 @@ const processAudio = async (req, res) => {
 
         console.log(`[PROSES 2] Mengirim audio ke Groq Whisper (Speech-to-Text)...`);
         const transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(audioPath), // Sekarang Groq akan membaca file berakhiran .wav
+            file: fs.createReadStream(audioPath), 
             model: "whisper-large-v3",
             language: "id",
             response_format: "json"
@@ -117,74 +115,98 @@ const processAudio = async (req, res) => {
             console.log(`[WARNING] Data FAQ tidak ditemukan.`);
         }
 
-        console.log(`[PROSES 4] Berpikir dan mencari jawaban (Groq Qwen)...`);
-        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
-        
-        Data Resmi Prodi:
-        ${faqDataString}
-        
-        Aturan ketat:
-        1. Jawab ramah, ringkas, dan sopan. 
-        2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
-        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
-        5. Jika meminta data sensitif kampus, tolak demi privasi.
-        6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
-        7. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
-        
-        PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
-        {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
-
-        const chatCompletion = await groq.chat.completions.create({
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userText }
-            ],
-            model: "qwen/qwen3.8-27b", 
-            temperature: 0.2, 
-            max_tokens: 800,
-        });
-
-        const botReplyRaw = chatCompletion.choices[0].message.content;
-        
         let finalEmotion = "NORMAL";
-        let finalAnswer = botReplyRaw;
+        let finalAnswer = "";
+        let butuhUpdate = false;
 
         try {
+            console.log(`[PROSES 4] Berpikir menggunakan AI (Groq Qwen)...`);
+            const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
+            
+            Data Resmi Prodi:
+            ${faqDataString}
+            
+            Aturan ketat:
+            1. Jawab ramah, ringkas, dan sopan. 
+            2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
+            3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+            4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
+            5. Jika meminta data sensitif kampus, tolak demi privasi.
+            6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
+            7. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
+            
+            PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
+            {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
+
+            const chatCompletion = await groq.chat.completions.create({
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userText }
+                ],
+                model: "qwen/qwen3.8-27b", 
+                temperature: 0.2, 
+                max_tokens: 800,
+            });
+
+            const botReplyRaw = chatCompletion.choices[0].message.content;
+            
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
             
             finalEmotion = parsedData.emotion || "NORMAL";
             finalAnswer = parsedData.jawaban || botReplyRaw;
+            butuhUpdate = parsedData.butuh_update || false;
 
-            // LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
-            if (parsedData.butuh_update === true) {
-                const updatePath = path.join(__dirname, '../data/pembaruan_database.json');
-                let updateList = [];
-                
-                if (fs.existsSync(updatePath)) {
-                    try {
-                        updateList = JSON.parse(fs.readFileSync(updatePath, 'utf8'));
-                    } catch (e) {
-                        updateList = []; 
+        } catch (error) {
+            // FITUR BARU: FALLBACK LOKAL JIKA GROQ ERROR/LIMIT
+            console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            
+            finalEmotion = "THINKING"; 
+            let jawabanDitemukan = "Mohon maaf, sistem AI Cimal sedang mengalami gangguan atau kelebihan muatan. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            
+            try {
+                const faqList = JSON.parse(faqDataString);
+                const userTeksLower = userText.toLowerCase();
+
+                for (let item of faqList) {
+                    const tanyaLower = item.pertanyaan.toLowerCase();
+                    if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
+                        jawabanDitemukan = item.jawaban;
+                        finalEmotion = "HAPPY";
+                        break;
                     }
                 }
-                
-                const newText = userText.toLowerCase();
-                let isDuplicate = updateList.some(existingQuestion => {
-                    const existingText = existingQuestion.toLowerCase();
-                    return existingText.includes(newText) || newText.includes(existingText);
-                });
+            } catch (faqError) {
+                console.error("Gagal membaca faq.json di mode lokal.");
+            }
 
-                if (!isDuplicate) {
-                    updateList.push(userText);
-                    fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
-                    console.log(`[INFO ADMIN] Audio: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userText}"`);
+            finalAnswer = jawabanDitemukan;
+        }
+
+        // LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
+        if (butuhUpdate === true || finalAnswer.includes("mengalami gangguan")) {
+            const updatePath = path.join(__dirname, '../data/pembaruan_database.json');
+            let updateList = [];
+            
+            if (fs.existsSync(updatePath)) {
+                try {
+                    updateList = JSON.parse(fs.readFileSync(updatePath, 'utf8'));
+                } catch (e) {
+                    updateList = []; 
                 }
             }
-        } catch (parseError) {
-            console.log(`[WARNING] AI tidak membalas dengan format JSON yang valid. Menggunakan teks mentah.`);
-            finalAnswer = botReplyRaw;
+            
+            const newText = userText.toLowerCase();
+            let isDuplicate = updateList.some(existingQuestion => {
+                const existingText = existingQuestion.toLowerCase();
+                return existingText.includes(newText) || newText.includes(existingText);
+            });
+
+            if (!isDuplicate) {
+                updateList.push(userText);
+                fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
+                console.log(`[INFO ADMIN] Audio: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userText}"`);
+            }
         }
 
         console.log(`  -> Emosi AI: ${finalEmotion}`);
@@ -198,12 +220,10 @@ const processAudio = async (req, res) => {
         console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
 
-        // 1. Buat ID unik untuk nama folder (bukan nama file)
         const idUnik = Date.now();
         const namaFolder = `cimal_suara_${idUnik}`;
         const folderTarget = path.join(publicFolder, namaFolder);
 
-        // 2. Buat folder target tersebut di dalam folder public
         if (!fs.existsSync(folderTarget)) {
             fs.mkdirSync(folderTarget, { recursive: true });
         }
@@ -211,20 +231,15 @@ const processAudio = async (req, res) => {
         try {
             const tts = new MsEdgeTTS();
             
-            // Setel suara ke GadisNeural (Remaja Indonesia) dengan kualitas MP3 standar untuk ESP32
             await tts.setMetadata('id-ID-GadisNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-            
-            // 3. PENTING: Masukkan PATH FOLDER (bukan path file). 
-            // msedge-tts akan otomatis membuat file bernama 'audio.mp3' di dalam folder ini.
             await tts.toFile(folderTarget, teksUntukSuara);
             
-            // 4. Generate URL lokal yang mengarah ke file audio.mp3 di dalam folder unik tersebut
-            const urlLokal = `http://${req.headers.host}/public/${namaFolder}/audio.mp3`;
+            const urlLokal = `https://${req.headers.host}/public/${namaFolder}/audio.mp3`;
             
             console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
             global.cimalResponseData = {
                 emotion: finalEmotion,
-                urls: [urlLokal] // URL sudah diarahkan ke file audio.mp3
+                urls: [urlLokal] 
             };
             console.log(`  -> Sukses! File audio "Gadis" dan emosi siap dijemput ESP32.`);
 
