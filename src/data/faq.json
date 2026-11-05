@@ -1,225 +1,243 @@
 [
     {
-        "keywords": [
-            "ruang 5",
-            "kelas 5",
-            "ruangan 5"
-        ],
-        "answer": "ruang 5 teknik informatika berada di lantai dua gedung utama sayap kanan."
+    "keywords" : ["Pencipta cimal", "Pembuat cimal", "developer cimal"],
+     "answer" : "Cimal dibuat oleh dua mahasiswa program studi teknik informatika universitas islam sumatera utara (UISU) stambuk 23, robot IoT cimal dibuat oleh Cindi Aulia Siregar dan Aplikasi chat cimal dibuat oleh Raja Farid Al-ghifari. Cimal adalah singkatan dari Cerdas Informatif Mesin Automasi Layanan. Cimal merupakan hasil dari tugas akhir yang di bimbing oleh bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. dan bapak Rachmat Aulia, S.Kom., M.Sc.IT. Cimal dibuat untuk membantu mahasiswa prodi teknik informatika UISU dalam mendapatkan informasi akademik secara cepat dan akurat."
+
     },
     {
-        "keywords": [
-            "biaya",
-            "spp",
-            "uang kuliah",
-            "cicilan"
-        ],
-        "answer": "biaya spp untuk mahasiswa teknik informatika dapat dilihat di portal akademik mahasiswa. pembayaran dapat dicicil sesuai ketentuan biro keuangan."
+        "keywords" : ["Fun fact cimal", "asal usul cimal yang sebenarnya", "aku Cindi Aulia Siregar yang Cantik"],
+        "answer" : " nama cimal sebenarnya adalah singkatan cindi dan akmal, nama cimal sendiri dicetuskan oleh akmal yang menginspirasi cindi untuk memberikan nama cimal ke robot Iot tugas akhir cindi karena cindi sangat menyukai nama ini."
     },
     {
-        "keywords": [
-            "kaprodi",
-            "ketua prodi",
-            "kepala program studi"
-        ],
-        "answer": "ketua program studi teknik informatika saat ini dapat anda temui di ruangan kaprodi yang berada di biro fakultas teknik uisu pada jam kerja, dari hari senin hingga jumat."
+        "keywords": ["kaprodi", "ketua program studi"],
+        "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
+    },
+        {
+        "keywords": ["staff akademik", "staff prodi", "staff program studi", "admin sisfo"],
+        "answer": "staff akademik program studi teknik informatika adalah abangda Habibi Lubis, S.E."
     },
     {
-        "keywords": [
-            "visi"
-        ],
+        "keywords": ["kaprodi", "ketua program studi"],
+        "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
+    },
+    {
+
+        "keywords": ["Nama Dosen", "Daftar Dosen", "Dosen"],
+        "answer": [
+            "Bapak Khairuddin Nasution, S.T., M.Kom.",
+            "Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. ",
+            "Bapak Antoni, S.Kom., M.Kom.",
+            "Ibu Tasliyah Haramaini, S.Si., M.Kom.",
+            "Bapak Satria Yudha Prayogi, S.T., M.Kom.",
+            "Bapak Heri Santoso, S.Kom., M.Kom.",
+            "Bapak Satria Yudha Prayogi, S.T., M.Kom.",
+            "Bapak Aulia Ichsan, S.T., M.Kom.",
+            "Bapak Rachmat Aulia, S.Kom., M.Sc.IT"
+        ]
+    },
+    {
+        "keywords": ["biaya", "spp", "uang kuliah", "cicilan"],
+                "answer": [
+            "biaya kuliah program studi teknik informatika untuk mahasiswa reguler adalah Rp. 6.000.000,- per tahun ajaran",
+            "biaya kuliah program studi teknik informatika untuk mahasiswa non-reguler adalah Rp. 7.000.000,- per tahun ajaran",
+            "ung kuliah dapat dicicil menjadi 6 kali pembayaran, dengan rincian sebagai berikut",
+            "untuk mahasisiswa reguler cicilan pertama sebesar Rp. 1.200.000,-",
+            "cicilan kedua sebesar Rp. 900.000,-",
+            "cicilan ketiga sebesar Rp. 900.000,-",
+            "untuk mahasisiswa non-reguler cicilan pertama sebesar Rp. 1.400.000,-",
+            "cicilan kedua sebesar Rp. 1.050.000,-",
+             "cicilan ketiga sebesar Rp. 1.050.000,-"
+            ]
+         },
+    {
+        "keywords": ["visi"],
         "answer": "visi program studi teknik informatika adalah menjadi program studi teknik informatika yang islami dan unggul pada bidang teknologi berkelanjutan cloud computing dan soft computing di tingkat nasional di tahun 2027."
     },
-    {
-        "keywords": [
-            "misi"
-        ],
+        {
+        "keywords": ["misi"],
         "answer": [
             "1. melaksanakan pendidikan dan pengajaran dalam bidang cloud computing dan soft computing yang mengacu kepada metode pembeljaran berbasi outcame based education (obe).",
             "2. melaksanakan penelitian bagi dosen dan mahasiswa yang berorientasi pada bidang cloud computing dan soft computing",
             "3. melaksanakan pengabdian kepada masyarakat bagi dosen dan mahasiswa yang menggunakan teknologi cloud computing dan soft computing dalam bentuk kemampuan masyarakat menjalankan serta mengimplementasikan aplikasi berbasis cloud computing dan soft computing.",
             "4. melaksanakan dakwah islmaiyah dan menjalin kerjasama program studi dalam setiap kegiatan pendidikan, penelitian dan pengabdian kepada masyarakat dengan instansi pemerintah maupun swasta baik dalam negeri maupun luar negeri untuk pengembanan prodi menerapkannya dalam bentuk nilai-nilai keislaman."
-        ]
+        ] 
     },
     {
-        "keywords": [
-            "mata kuliah semester 1",
-            "mk semester 1",
-            "mk sem 1"
-        ],
-        "answer": [
-            "1. pendidikan agama islam",
-            "2. pancasila dan kewarganegaraan",
-            "3. kalkulus I",
-            "4. fisika",
-            "5. pengantar teknologi informasi",
-            "6. logika dan algoritma",
-            "7. eletronika",
-            " jumlah sks semester 1 adalah 18 sks."
-        ]
+    "keywords" : ["tujuan"],
+    "answer" : [ 
+        "1. Menghasilkan sarjana yang bermoral Islami dan berakhlak mulia, professional serta mampu dalam bidang Cloud Computing dan Soft Computing dengan metode pembelajaran berbasis Outcome Based Education (OBE).",
+        "2. Menghasilkan penelitian dosen dan mahasiswa dalam bidang Cloud Computing dan Soft Computing sebagai upaya penyempurnaan serta peningkatan mutu ilmu pengetahuan dan teknologi sesuai dengan nilai-nilai Islami, serta menghasilkan karya yang inovatif untuk meningkatkan mutu pendidikan demi kemaslahatan umat.",
+        "3. Terlaksananya pengabdian kepada masyarakat dalam penerapan serta pelaksanaan aplikasi yang berbasis Cloud Computing dan Soft Computing dengan dengan metode dan teknologi yang terbarukan.",
+        "4. Terwujudnya nilai-nilai Islami ditengah masyarakat melalui Dakwah Islamiyah pada setiap kegiatan pendidikan, penelitian dan pengabdian kepada masyarakat serta kerjasama dengan institusi pendidikan dan instansi pemerintah maupun swasta baik dalam negeri maupun luar negeri untuk pengembangan Program Studi."
+    ]
     },
     {
-        "keywords": [
-            "mata kuliah semester 2",
-            "mk semester 2",
-            "mk sem 2"
-        ],
-        "answer": [
-            "1. aqidah dan tauhid",
-            "2. bahasa indonesia",
-            "3. bahasa inggris",
-            "4. kalkulus II",
-            "5. praktikum fisika",
-            "6. algoritma dan pemrograman I",
-            "7. statistik dan probabilitas",
-            "8. aljabar linier dan matriks",
-            "9. sistem digital",
-            "10. praktikum sistem digital",
-            "11. praktikum algoritma dan pemrograman I",
-            " jumlah sks semester 2 adalah 20 sks."
+        "keywords":["Strategi"],
+        "answer":[
+            "Strategi pencapaian Program Studi Teknik Informatika Fakultas Teknik UISU merupakan target yang terukur, sebagai indikator tingkat keberhasilan dari tujuan yang telah ditetapkan antara lain sebagai berikut:",
+            "a. Menghasilkan Sarjana Teknik Informatika yang bermoral Islami dan berakhlak mulia, professional serta mampu mengikuti dan memanfaatkan perkembangan informasi, ilmu pengetahuan serta teknologi informasi dan komunikasi.",
+            "b. Menetapkan standar pendidikan, penelitian, pengabdian masyarakat dan dakwah Islamiyah khusus Program Studi Teknik Informatika.",
+            "c. Meningkatkan mutu proses pendidikan dan sistem evaluasi.",
+            "d. Mengintegrasikan kajian-kajian Islam dalam setiap kegiatan pembelajaran.",
+            "e. Menetapkan modul tersendiri untuk bidang unggulan dalam Cloud Computing dan Soft Computing."
         ]
     },
-    {
-        "keywords": [
-            "mata kuliah semester 3",
-            "mk semester 3",
-            "mk sem 3"
-        ],
+        {
+        "keywords": ["mata kuliah semester 1", "mk semester 1", "mk sem 1"],
         "answer": [
-            "1. ibadah dan akhlak",
-            "2. kewirausahaan",
-            "3. matematika diskrit",
-            "4. algoritma dan pemrograman II",
-            "5. rekayasa perangkat lunak",
-            "6. struktur data",
-            "7. pengantar komunikasi data",
-            "8. mikroprosesor",
-            "9. praktikum algoritma dan pemrograman II",
-            "10. praktikum mikroprosesor",
-            "11. praktikum struktur data",
+            "pendidikan agama islam",
+            "pancasila dan kewarganegaraan",
+            "kalkulus 1",
+            "fisika",
+            "pengantar teknologi informasi",
+            "logika dan algoritma",
+            "eletronika",
+            "jumlah sks semester 1 adalah 18 sks."
+        ]
+    },
+        {
+        "keywords": ["mata kuliah semester 2", "mk semester 2", "mk sem 2"],
+        "answer": [
+            "aqidah dan tauhid",
+            "bahasa indonesia",
+            "bahasa inggris",
+            "kalkulus II",
+            "praktikum fisika",
+            "algoritma dan pemrograman I",
+            "statistik dan probabilitas",
+            "aljabar linier dan matriks",
+            "sistem digital",
+            "praktikum sistem digital",
+            "praktikum algoritma dan pemrograman I",
+            "jumlah sks semester 2 adalah 20 sks."
+        ]
+    }, 
+        {
+        "keywords": ["mata kuliah semester 3", "mk semester 3", "mk sem 3"],
+        "answer": [
+            "ibadah dan akhlak",
+            "kewirausahaan",
+            "matematika diskrit",
+            "algoritma dan pemrograman 2",
+            "rekayasa perangkat lunak",
+            "struktur data",
+            "pengantar komunikasi data",
+            "mikroprosesor",
+            "praktikum algoritma dan pemrograman II",
+            "praktikum mikroprosesor",
+            "praktikum struktur data",
             " jumlah sks semester 3 adalah 23 sks."
         ]
-    },
-    {
-        "keywords": [
-            "mata kuliah semester 4",
-            "mk semester 4",
-            "mk sem 4"
-        ],
+    },     
+        {
+        "keywords": ["mata kuliah semester 4", "mk semester 4", "mk sem 4"],
         "answer": [
-            "1. munakahat",
-            "2. kecakapan antar personal",
-            "3. organisasi dan arsitektur komputer",
-            "4. sistem pangkalan data",
-            "5. pemrograman berorientasi objek",
-            "6. sistem operasi",
-            "7. teknik kompilasi",
-            "8. praktikum pemrograman berorientasi objek",
-            "9. praktikum teknik kompilasi",
-            "10. praktikum sistem pangkalan data",
-            "11. praktikum sistem operasi",
+            "munakahat",
+            "kecakapan antar personal",
+            "organisasi dan arsitektur komputer",
+            "sistem pangkalan data",
+            "pemrograman berorientasi objek",
+            "sistem operasi",
+            "teknik kompilasi",
+            "praktikum pemrograman berorientasi objek",
+            "praktikum teknik kompilasi",
+            "praktikum sistem pangkalan data",
+            "praktikum sistem operasi",
             " jumlah sks semester 4 adalah 21 sks."
         ]
-    },
-    {
-        "keywords": [
-            "mata kuliah semester 5",
-            "mk semester 5",
-            "mk sem 5"
-        ],
+    },     
+        {
+        "keywords": ["mata kuliah semester 5", "mk semester 5", "mk sem 5"],
         "answer": [
-            "1. muamalat",
-            "2. analisa dan perancangan sistem",
-            "3. etika profesi teknik informatika",
-            "4. sistem informasi",
-            "5. kecerdasan buatan",
-            "6. bisnis ict",
-            "7. desain dan analisis algoritma",
-            "8. jaringan komputer",
-            "9. teori bahasa dan otomata",
-            "10. praktikum jaringan komputer",
-            "11. praktikum kecerdasan buatan",
+            "muamalat",
+            "analisa dan perancangan sistem",
+            "etika profesi teknik informatika",
+            "sistem informasi",
+            "kecerdasan buatan",
+            "bisnis ict",
+            "desain dan analisis algoritma",
+            "jaringan komputer",
+            "teori bahasa dan otomata",
+            "praktikum jaringan komputer",
+            "praktikum kecerdasan buatan",
             " jumlah sks semester 5 adalah 21 sks."
         ]
-    },
-    {
-        "keywords": [
-            "mata kuliah semester 6",
-            "mk semester 6",
-            "mk sem 6"
-        ],
+    },  
+        {
+        "keywords": ["mata kuliah semester 6", "mk semester 6", "mk sem 6"],
         "answer": [
-            "1. islam dan bidang ilmu teknik",
-            "2. interaksi manusia dan komputer",
-            "3. model dan simulasi",
-            "4. sistem pendukung keputusan",
-            "5. kecerdasan buatan",
-            "6. bisnis ict",
-            "7. keamanan komputer",
-            "8. sistem terdistribusi",
-            "9. metode numerik",
-            "10. pemrograman web",
-            "11. praktikum pemrograman web",
+            "islam dan bidang ilmu teknik",
+            "interaksi manusia dan komputer",
+            "model dan simulasi",
+            "sistem pendukung keputusan",
+            "kecerdasan buatan",
+            "bisnis ict",
+            "keamanan komputer",
+            "sistem terdistribusi",
+            "metode numerik",
+            "pemrograman web",
+            "praktikum pemrograman web",
             " jumlah sks semester 6 adalah 19 sks."
         ]
     },
+
     {
-        "keywords": [
-            "mata kuliah semester 7",
-            "mk semester 7",
-            "mk sem 7"
-        ],
+        "keywords": ["mata kuliah semester 7", "mk semester 7", "mk sem 7"],
         "answer": [
-            "1. kkn tematik",
-            "2. metode penelitian",
-            "3. komputer dan masyarakat",
-            "4. grafika komputer",
-            "5. teknologi opensource",
-            "6. matakuliah pilihan",
-            "7. matakuliah pilihan",
-            " jumlah sks semester 7 adalah 20 sks."
+            "kkn tematik",
+            "metode penelitian",
+            "komputer dan masyarakat",
+            "grafika komputer",
+            "teknologi opensource",
+            "matakuliah pilihan",
+            "matakuliah pilihan",
+            " jumlah sks semester 6 adalah 20 sks."
         ]
     },
-    {
-        "keywords": [
-            "mata kuliah semester 8",
-            "mk semester 8",
-            "mk sem 8"
-        ],
+        {
+        "keywords": ["mata kuliah semester 8", "mk semester 8", "mk sem 8"],
         "answer": [
-            "1. bahasa inggris lanjutan (toefl)",
-            "2. matakuliah pilihan",
-            "3. skripsi",
+            "bahasa inggris lanjutan (toefl)",
+            "matakuliah pilihan",
+            "skripsi",
             " jumlah sks semester 8 adalah 9 sks."
         ]
-    },
+    }, 
     {
-        "keywords": [
-            "mata kuliah pilihan",
-            "mk pilihan"
-        ],
+        "keywords": ["biaya praktikum", "uang praktikum"],
         "answer": [
-            "1. matakuliah pilihan peminatan pemrograman semester 7 adalah pengolahan citra digital dan aplikasi mobile",
-            "2. matakuliah pilihan peminatan pemrograman semester 8 adalah sistem multimedia",
-            "3. matakuliah pilihan peminatan robotika semester 7 adalah kecerdasan komputasional dan sensor traduser",
-            "4. matakuliah pilihan peminatan robotika semester 8 adalah robotika",
-            "5. matakuliah pilihan peminatan jaringan semester 7 adalah jaringan forensik dan cloud computing",
-            "6. matakuliah pilihan peminatan jaringan semester 8 adalah keamanan web dan jaringan"
+            "praktikum fisika sebesar Rp. 130.000,-",
+            "praktikum algoritma dan pemrograman 1 sebesar Rp. 100.000,-",
+            "praktikum sistem digital sebesar Rp. 100.000,-",
+            "praktikum algoritma dan pemrograman 2 sebesar Rp. 100.000,-",
+            "praktikum mikroprosesor sebesar Rp. 100.000,-",
+            "praktikum struktur data sebesar Rp. 100.000,-",
+            "praktikum pemrograman berorientasi objek sebesar Rp. 100.000,-",
+            "praktikum teknik kompilasi sebesar Rp. 100.000,-",
+            "praktikum sistem pangkalan data sebesar Rp. 100.000,-",
+            "praktikum sistem operasi sebesar Rp. 100.000,-",
+            "praktikum jaringan komputer sebesar Rp. 100.000,-",
+            "praktikum kecerdasan buatan sebesar Rp. 100.000,-",
+            "praktikum pemrograman web sebesar Rp. 100.000,-"
+        ]
+    },
+       {    
+        "keywords": ["mata kuliah pilihan", "mk pilihan", "mk pilihan"],
+        "answer": [
+            "matakuliah pilihan peminatan pemrograman semester 7 adalah pengolahan citra digital dan aplikasi mobile",
+            "matakuliah pilihan peminatan pemrograman semester 8 adalah sistem multimedia",
+            "matakuliah pilihan peminatan robotika semester 7 adalah kecerdasan komputasional dan sensor traduser",
+            "matakuliah pilihan peminatan robotika semester 8 adalah robotika",
+            "matakuliah pilihan peminatan jaringan semester 7 adalah jaringan forensik dan cloud computing",
+            "matakuliah pilihan peminatan jaringan semester 8 adalah keamanan web dan jaringan"
         ]
     },
     {
-        "keywords": [
-            "kurikulum",
-            "mata kuliah",
-            "silabus"
-        ],
+        "keywords": ["kurikulum", "mata kuliah", "silabus"],
         "answer": "kurikulum program studi teknik informatika mencakup mata kuliah inti seperti algoritma, struktur data, basis data, jaringan komputer, dan pemrograman. silabus lengkap dapat diakses melalui portal akademik mahasiswa."
     },
-    {
-        "keywords": [
-            "syarat kp",
-            "persyaratan kerja praktek"
-        ],
+        {    
+        "keywords": ["syarat kp", "persyaratan kerja praktek"],
         "answer": [
             "1. telah lulus mata kuliah minimal 100 sks",
             "2. mempunyai IPK minimal 2,00",
@@ -231,11 +249,8 @@
             "8. KP harus sesuai dengan bidang ilmu pada program studi yang bersangkutan"
         ]
     },
-    {
-        "keywords": [
-            "materi kp",
-            "materi kerja praktek"
-        ],
+       {    
+        "keywords": ["materi kp", "materi kerja praktek"],
         "answer": [
             "1. mempelajari cara kerja sistem komputer secara lengkap, antara lain personal komputer, notebook dan sistem komputer lainnya",
             "2. mempelajari dan melakukan perakitan sistem komputer, mulai dari tahap persiapan sampai sistem komputer dapat digunakan",
@@ -261,49 +276,120 @@
             "22. melakukan pembuatan multimedia"
         ]
     },
-    {
-        "keywords": [
-            "tatib kp",
-            "tatib kerja praktek",
-            "tat tertib kerja praktek",
-            "tata tertib kp"
-        ],
+        {    
+        "keywords": ["tatib kp", "tatib kerja praktek", "tat tertib kerja praktek", "tata tertib kp"],
         "answer": [
-            "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.",
+            "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.", 
             "2. Mahasiswa menjaga nama baik almamate",
-            "3. Mahasiswa memakai tanda pengenal Kerja Praktek (Jika ada).",
-            "4. Mahasiswa harus hadir sesuai dengan jadual jam kerja tempat Kerja Praktek.",
-            "5. Mahasiswa dilarang merokok, meminum minuman keras, membawa senjata tajam, senjata api dan narkoba di lingkungan tempat KP.",
-            "6. Mahasiswa harus menjaga kebersihan, keindahan dan kerapian.",
-            "7. Mahasiswa harus menjaga etika, sopan santun, ketenangan, ketertiban dan ketentraman tempat KP.",
-            "8. Mahasiswa harus mematuhi tata tertib tempat KP.",
-            "9. Pelanggaran terhadap tata tertib dan tata tertib tempat kerja Praktek akan dikenakan sanksi.",
+            "3. Mahasiswa memakai tanda pengenal Kerja Praktek (Jika ada).", 
+            "4. Mahasiswa harus hadir sesuai dengan jadual jam kerja tempat Kerja Praktek.", 
+            "5. Mahasiswa dilarang merokok, meminum minuman keras, membawa senjata tajam, senjata api dan narkoba di lingkungan tempat KP.", 
+            "6. Mahasiswa harus menjaga kebersihan, keindahan dan kerapian.", 
+            "7. Mahasiswa harus menjaga etika, sopan santun, ketenangan, ketertiban dan ketentraman tempat KP.", 
+            "8. Mahasiswa harus mematuhi tata tertib tempat KP.", 
+            "9. Pelanggaran terhadap tata tertib dan tata tertib tempat kerja Praktek akan dikenakan sanksi.", 
             "10. Hal-hal lain dapat menyesuaikan dengan kondisi di tempat KP."
         ]
     },
-    {
-        "keywords": [
-            "apa itu skripsi",
-            "arti skripsi",
-            "definisi skripsi"
-        ],
+        {    
+        "keywords": ["syarat kp", "persyaratan kerja praktek", ""],
+        "answer": [
+            "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.", 
+            "2. Mahasiswa menjaga nama baik almamate",
+            "3. Mahasiswa memakai tanda pengenal Kerja Praktek (Jika ada).", 
+            "4. Mahasiswa harus hadir sesuai dengan jadual jam kerja tempat Kerja Praktek.", 
+            "5. Mahasiswa dilarang merokok, meminum minuman keras, membawa senjata tajam, senjata api dan narkoba di lingkungan tempat KP.", 
+            "6. Mahasiswa harus menjaga kebersihan, keindahan dan kerapian.", 
+            "7. Mahasiswa harus menjaga etika, sopan santun, ketenangan, ketertiban dan ketentraman tempat KP.", 
+            "8. Mahasiswa harus mematuhi tata tertib tempat KP.", 
+            "9. Pelanggaran terhadap tata tertib dan tata tertib tempat kerja Praktek akan dikenakan sanksi.", 
+            "10. Hal-hal lain dapat menyesuaikan dengan kondisi di tempat KP."
+        ]
+    },
+        {
+         "keywords": ["apa itu skripsi", "arti skripsi", "definisi skripsi"],
         "answer": "Skripsi merupakan karya tulis ilmiah hasil penelitian mandiri untuk memenuhi sebagian persyaratan memperoleh derajat kesarjanaan S-1 pada Jurusan Informatika Fakultas Teknik Universitas Islam Sumatera Utara. Sebelum menjalankan penelitian, mahasiswa wajib membuat usulan penelitian yang kemudian harus disetujui dosen pembimbing. Usulan penelitian yang telah disetujui kemudian dilaksanakan oleh mahasiswa dan hasilnya disusun menjadi skripsi. Semua kegiatan itu ditunjang oleh kemahiran menulis secara ilmiah. "
     },
+        {
+         "keywords": ["syarat skripsi", "persyaratan skripsi", "ketentuan skripsi"],
+         "answer": [
+                "1. Telah menempuh paling sedikit 130 SKS.",
+                "2. Terdaftar dan aktif mengikuti perkuliahan pada semester berjalan.",
+                "3. Telah mencantumkan mata kuliah Skripsi di dalam KRS.",
+                "4. IP Kumulatif sekurang-kurangnya 2,00.",
+                "5. Telah lulus mata kuliah Metodologi Penelitian.",
+                "6. Telah melaksanakan Kerja Praktek (KP).",
+                "7. Waktu bimbingan/pembuatan Tugas Akhir maksimal selama 6 bulan.",
+                "Perpanjangan waktu bimbingan hanya dapat dilakukan atas rekomendasi Pembimbing dan mencantumkan kembali Skripsi dalam KRS."
+        ]
+    },
     {
-        "keywords": [
-            "syarat skripsi",
-            "persyaratan skripsi",
-            "ketentuan skripsi"
-        ],
-        "answer": [
-            "1. Telah menempuh paling sedikit 130 SKS.",
-            "2. Terdaftar dan aktif mengikuti perkuliahan pada semester berjalan.",
-            "3. Telah mencantumkan mata kuliah Skripsi di dalam KRS.",
-            "4. IP Kumulatif sekurang-kurangnya 2,00.",
-            "5. Telah lulus mata kuliah Metodologi Penelitian.",
-            "6. Telah melaksanakan Kerja Praktek (KP).",
-            "7. Waktu bimbingan/pembuatan Tugas Akhir maksimal selama 6 bulan.",
+        "keywords": ["materi skripsi"],
+        "answer" : [
+            "Materi yang dapat dijadikan topik skripsi antara lain ",
+            "1. Implementasi micro controller di bidang kesehatan, industri dan agribisnis, Contoh Kontrol suhu Inkubator, ruang obat, deteksi kebakaran, banjir, kemacetan lalulintas dan sebagainya  Simulasi komputer, Contoh simulasi penjadwalan pada sistem operasi, penjadwalan kereta api, antrian dan sebagainya",
+            "2. Simulasi komputer, Contoh simulasi penjadwalan pada sistem operasi, penjadwalan kereta api, antrian dan sebagainya.",
+            "3. Membuat prototype robot baik secara fisik maupun simulasi robot dengan komputer ",
+            "4. Mengkaji aspek security pada jaringan komputer atau aspek perangkat keras lainnya.",
+            "5.  Merancang dan mengimplementasikan jaringan komputer disuatu kantor atau perusahaan,",
+            "6. Merancang multimedia untuk pembelajaran, periklanan dan web.",
+            "7. Merancang sebuah interface/atau peralatan berbasis komputer.",
+            "8. Mengkaji dan menganalisa bentuk dari sistem komunikasi data.",
+            "9. Rekayasa perangkat lunak untuk sistem informasi berbasis web."
+        ]
+    },
+    {
+        "keywords": [ "Prosedur Skripsi", "Tata Cara Skripsi", "Alur Skripsi"],
+        "answer" : [
+            "Mahasiswa menentukan/mencari sendiri topik tugas akhir atau ditawarkan oleh koordinator Skripsi atau dosen pembimbing. ",
+            "(catatan : Informasi tentang calon pembimbing yang masih dapat membimbing dapat ditanyakan kepada Ketua Program Studi)",
+            "Mahasiswa membuat Proposal Skripsi dan berkonsultasi dengan pembimbing Skripsi, Calon Pembimbing manandatangani Form kesediaan untuk membimbing. Salah satu pembimbing adalah pembimbing Kerja Praktek dan satu orang pembimbing lainnya dapat dipilih sendiri sepanjang kuota yang bersangkutan masih belum penuh.",
+            "Jika pembimbing yang diinginkan semuanya memenuhi syarat, Ketua Jurusan membuat SK pembimbing.",
+            "Mahasiswa mengajukan usul judul tugas akhir disertai proposal tugas akhir yang telah disetujui kedua pembimbing kepada Ketua Program Studi untuk mendapatkan SK pembimbing, dengan melampirkan ",
+            "1. Map Batik",
+            "2. Surat permohonan tugas akhir ",
+            "3. Fotocopy Kwitansi pembayaran SPP terakhir",
+            "4. Kwitansi asli pembayaran skripsi",
+            "5. Fotocopy KRS yang sedang berjalan",
+            "7. Proposal skripsi dengan judul 1 dan 2 yang berisi cover, abstrak, Daftar Isi, Bab 1 sampai bab 3 dan daftar pustaka",
+            "8. seluruh berkas dari poin 2 sampai 7 di scan dalam 1 pdf",
+            "(Catatan form yang harus diisi oleh mahasiswa dapat ditanyakan kepada sataff akademik yaitu Form Permohonan pengajuan judul skripsi, Lembar pengesahan judul skripsi.)",
+            "SK pembimbing yang telah diterbitkan dapat diambil pada bagian administrasi (Tata Usaha Fakultas Teknik)",
+            "Mahasiswa meminta Surat Pengantar untuk melakukan penelitian, jika akan melakukan penelitian/pengumpulan data pada suatau lembaga/perusahaan bersamaan denganpenyerahan proposal peneitian. ",
+            "Ketua Prodi membuat surat pengantar penelitian kemudian mahasiswa menyerahkan surat pengantar penelitian tersebut kepada lembaga/perusahaan yang bersangkutan dan menerima surat balasan di izinkan.",
+            "Setelah selesai melaksanakan penelitian/pengumpulan data mahasiswa meminta surat keterangan telah melaksanakan penelitian/pengumpulan data .",
+            "Mahasiswa membuat laporan Skripsi",
+            "Mahasiswa berkonsultasi dengan pembimbing I dan II mengenai laporan yang dibuat. Konsultasi dilakukan minimal 2 kali dalam seminggu, ",
+            "Jika dalam waktu 6 (enam) bulan terhitung sejak SK pembimbing dikeluarkan mahasiswa belum dapat menyelesaikan pembuatan laporan Skripsi, maka mahasiswa harus mengajukan ijin perpanjangan masa pembimbingan selama 6 (enam) bulan lagi setelah mendapat rekomendasi dari pembimbing skripsi. Perpanjangan hanya dapat dilakukan satu kali.",
+            "Jika seluruh isi Laporan telah disetujui oleh kedua pembimbing, yang dibuktikan dengan rekomendasi untuk seminar skripsi dan keterangan pada kartu bimbingan, maka mahasiswa dapat mendaftar untuk melaksanakan ujian komprehensif(seminar).",
+            "Jika mahasiswa tidak lulus seminar skripsi dapat melakukan seminar ulang dan waktunya ditentukan kemudian oleh Prodi. Seminar ulang hanya dapat dilakukan maksimal 2 kali, jika masih tidak lulus maka diharuskan untuk membuat Skripsi dengan topik yang baru.",
+            " Perbaikan yang dilakukan harus dikonsultasikan dengan tim penguji, tim penguji akan memberikan tanda tangan pada lembar perbaikan bahwa telah dilakukan perbaikan seperti yang disarankan.",
+            "Mahasiswa dapat mencetak laporan jika telah disetujui oleh tim penguji. Pencetakan Laporan Skripsi sebanyak 5 (lima) eksemplar dengan rincian 1 (satu) untuk pembimbing I, 1 (satu) untuk pembimbing II , 1 (satu) untuk tempat penelitian (jika diminta), 1 (satu) untuk Perpustakaan dan 1 (satu) untuk Jurusan.",
+            "Laporan Skripsi harus telah diterima Jurusan paling lambat 1 (satu) bulan terhitung sejak selesai diadakan sidang sarjana, jika tidak maka kelulusan yang telah dikeluarkan akan ditinjau kembali." 
+        ]
+    },
+    {
+        "keywords" : [ "syarat seminar skripsi", "persyaratan seminar skripsi", "ketentuan seminar skripsi" ],
+        "answer" : [
+            "1. Map (sesuai warna prodi)",
+            "2. permohonan seminar ke kaprodi.",
+            "3. Mengisi Form Biodata.",
+            "4. Fotocopy SPP cicilan terakhir dan Riwayat SPP siakad",
+            "5. Kwitansi pembayaran TA (skripsi) dan kwitansi asli pembayaran seminar",
+            "6. Fotocopy KRS yang sedang berjalan yang telah di tanda tangani oleh dosen wali dan ketua prodi",
+            "7.Transkrip Nilai Terbbaru",
+            "8. Surat keterangan Lulus praktikum",
+            "9. Surat keterangan lulus kerja praktek",
+            "10. Fotokopi berita acara  dan hasil expose kerja praktek",
+            "11. Cover, daftar isi, surat balasan riset, fotokopi sk pembimbing, fotokopi kartu bimbingan skripsi dosping 1 dan 2 (jilid biasa)",
+            "12. Fotokopi sertifikat TOEFL (boleh menyusul)",
+            "13. fotokopi sertifikat membaca al-quran (boleh menyusul)",
+            "14. Skrikpsi dari cover sampai lampiran di jilid biasa untuk dosen penguji rangkap 3 dan 1 untuk mahasiswa diserahkan saat menyerahkan undangan ke dosen penguji ",
+            "15. Menyiapkan PPT laporan skripsi untuk seminar",
             "Perpanjangan waktu bimbingan hanya dapat dilakukan atas rekomendasi Pembimbing dan mencantumkan kembali Skripsi dalam KRS."
         ]
+    },
+    {
+        "answer" : ["   "]
     }
 ]
