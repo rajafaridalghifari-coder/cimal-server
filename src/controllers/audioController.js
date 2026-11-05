@@ -157,25 +157,56 @@ const processAudio = async (req, res) => {
             finalAnswer = parsedData.jawaban || botReplyRaw;
             butuhUpdate = parsedData.butuh_update || false;
 
-        } catch (error) {
-            // FITUR BARU: FALLBACK LOKAL JIKA GROQ ERROR/LIMIT
+        } catch (apiError) {
+            // JIKA GROQ API ERROR / KENA LIMIT, JALANKAN MODE LOKAL PINTAR
             console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
             
-            finalEmotion = "THINKING"; 
-            let jawabanDitemukan = "Mohon maaf, sistem AI Cimal sedang mengalami gangguan atau kelebihan muatan. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            // Pesan default jika benar-benar tidak ada kata yang cocok di database
+            let jawabanDitemukan = "Mohon maaf, Cimal belum memiliki informasi terkait hal tersebut. Silakan tanyakan langsung ke bagian Tata Usaha.";
             
             try {
                 const faqList = JSON.parse(faqDataString);
-                const userTeksLower = userText.toLowerCase();
+                const userTeksLower = userMessage.toLowerCase(); // Jika di audioController, ganti userMessage menjadi userText
+                
+                let bestMatch = null;
+                let highestScore = 0;
 
+                // Memeriksa setiap data di database FAQ
                 for (let item of faqList) {
+                    let score = 0;
                     const tanyaLower = item.pertanyaan.toLowerCase();
+                    
+                    // 1. Cek jika kalimatnya sama persis
                     if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
-                        jawabanDitemukan = item.jawaban;
-                        finalEmotion = "HAPPY";
-                        break;
+                        score += 10; 
+                    }
+
+                    // 2. Cek kecocokan per kata (mengatasi typo atau kalimat terbalik)
+                    const kataUser = userTeksLower.split(" ");
+                    for (let kata of kataUser) {
+                        // Abaikan kata hubung pendek (di, ke, dan, itu)
+                        if (kata.length > 3 && tanyaLower.includes(kata)) { 
+                            score += 1;
+                        }
+                    }
+
+                    // Simpan jawaban dengan skor kecocokan tertinggi
+                    if (score > highestScore) {
+                        highestScore = score;
+                        bestMatch = item.jawaban;
                     }
                 }
+
+                // Jika ada minimal 1 kata penting yang cocok, gunakan jawaban dari database
+                if (highestScore > 0 && bestMatch) {
+                    jawabanDitemukan = bestMatch;
+                    butuhUpdate = false; // Karena bisa dijawab, tidak perlu masuk log pembaruan
+                    if (typeof finalEmotion !== 'undefined') finalEmotion = "HAPPY";
+                    console.log(`[INFO LOKAL] Jawaban berhasil ditemukan di database (Skor: ${highestScore})`);
+                } else {
+                    butuhUpdate = true; // Benar-benar tidak ada di database, wajib masuk log
+                }
+
             } catch (faqError) {
                 console.error("Gagal membaca faq.json di mode lokal.");
             }
