@@ -5,34 +5,88 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const noDataResponse =
     'Maaf, saya belum memiliki informasi resmi yang cukup untuk menjawabnya. Silakan konfirmasi ke Program Studi Teknik Informatika UISU.';
 
+const MAX_REFERENCES = 4;
+
+// Angka yang ditulis dengan kata diubah menjadi digit,
+// misalnya "semester dua" menjadi "semester 2".
+const NUMBER_WORDS = {
+    satu: '1', dua: '2', tiga: '3', empat: '4',
+    lima: '5', enam: '6', tujuh: '7', delapan: '8',
+};
+
+// Kata umum yang tidak membantu memilih entri FAQ.
+const STOPWORDS = new Set([
+    'apa', 'apakah', 'saja', 'yang', 'di', 'ke', 'dari', 'dan', 'atau', 'untuk',
+    'dengan', 'pada', 'ini', 'itu', 'ada', 'adalah', 'bisa', 'dapat', 'saya',
+    'aku', 'kamu', 'mau', 'ingin', 'kalau', 'jika', 'berapa', 'bagaimana',
+    'kapan', 'siapa', 'mana', 'dimana', 'tidak', 'harus', 'seperti', 'punya',
+    'program', 'studi', 'prodi', 'teknik', 'informatika', 'uisu', 'cimal',
+    'tolong', 'dong', 'ya', 'sih', 'nya', 'lewat', 'oleh', 'sebenarnya',
+]);
+
 function normalize(text) {
-    return String(text)
+    return String(text ?? '')
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
-        .trim();
+        .trim()
+        .split(' ')
+        .map((word) => NUMBER_WORDS[word] ?? word)
+        .join(' ');
+}
+
+function tokens(text) {
+    return normalize(text)
+        .split(' ')
+        .filter((word) => (word.length > 1 || /^\d$/.test(word)) && !STOPWORDS.has(word));
 }
 
 function formatAnswer(answer) {
     return Array.isArray(answer) ? answer.join('\n') : String(answer ?? '');
 }
 
-// PERBAIKAN 1: kata kunci kosong ("") diabaikan.
+// Entri tanpa kata kunci diabaikan, dan kata kunci kosong ("") dibuang.
 // Sebelumnya "".includes("") selalu true sehingga satu entri ikut terkirim
 // pada SETIAP pertanyaan.
-function validKeywords(item) {
-    return Array.isArray(item.keywords)
-        ? item.keywords.map(normalize).filter((keyword) => keyword.length > 0)
-        : [];
+const entries = faq
+    .map((item) => {
+        const keywords = Array.isArray(item.keywords)
+            ? item.keywords.map(normalize).filter((keyword) => keyword.length > 0)
+            : [];
+        const text = formatAnswer(item.answer);
+        return {
+            keywords,
+            text,
+            keywordTokens: new Set(keywords.flatMap(tokens)),
+            answerTokens: new Set(tokens(text)),
+        };
+    })
+    .filter((entry) => entry.keywords.length > 0 && entry.text.trim().length > 0);
+
+// Skor relevansi: kata kunci utuh yang muncul pada pertanyaan bernilai paling
+// tinggi; setelah itu kata pertanyaan yang muncul pada kata kunci, lalu kata
+// pertanyaan yang muncul pada isi jawaban.
+function score(entry, normalizedMessage, messageTokens) {
+    let value = 0;
+    for (const keyword of entry.keywords) {
+        if (` ${normalizedMessage} `.includes(` ${keyword} `)) value += 10;
+    }
+    for (const word of messageTokens) {
+        if (entry.keywordTokens.has(word)) value += 3;
+        else if (entry.answerTokens.has(word)) value += 1;
+    }
+    return value;
 }
 
-function toReference(items) {
-    return items
-        .map(
-            (item) =>
-                `Topik: ${validKeywords(item).join(', ')}\nInformasi: ${formatAnswer(item.answer)}`,
-        )
-        .join('\n\n');
+function selectReferences(message) {
+    const normalizedMessage = normalize(message);
+    const messageTokens = [...new Set(tokens(message))];
+    return entries
+        .map((entry) => ({ entry, value: score(entry, normalizedMessage, messageTokens) }))
+        .filter((item) => item.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, MAX_REFERENCES)
+        .map((item) => item.entry);
 }
 
 const getChatResponse = async (req, res) => {
@@ -43,16 +97,14 @@ const getChatResponse = async (req, res) => {
         return res.status(400).json({ error: 'Pesan tidak boleh kosong' });
     }
 
-    const normalizedMessage = normalize(userMessage);
-    const matches = faq.filter((item) =>
-        validKeywords(item).some((keyword) => normalizedMessage.includes(keyword)),
-    );
+    const references = selectReferences(userMessage);
+    if (references.length === 0) {
+        return res.json({ response: noDataResponse });
+    }
 
-    // PERBAIKAN 2: jika tidak ada kata kunci yang cocok (misalnya pertanyaan
-    // dengan susunan kata berbeda), seluruh FAQ dikirim sebagai referensi
-    // agar LLM tetap dapat menemukan informasi yang relevan.
-    const reference =
-        matches.length > 0 ? toReference(matches.slice(0, 4)) : toReference(faq);
+    const reference = references
+        .map((entry) => `Topik: ${entry.keywords.join(', ')}\nInformasi: ${entry.text}`)
+        .join('\n\n');
 
     try {
         const chatCompletion = await groq.chat.completions.create({
@@ -64,7 +116,6 @@ const getChatResponse = async (req, res) => {
                     content:
                         'Kamu adalah CIMAL, asisten Teknik Informatika UISU. ' +
                         'Jawab pertanyaan dalam bahasa Indonesia HANYA berdasarkan DATA REFERENSI. ' +
-                        // PERBAIKAN 3: instruksi diperjelas agar model tidak terlalu cepat menolak.
                         'Pertanyaan pengguna bisa memakai kata yang berbeda dari data ' +
                         '(misalnya "ketua prodi" = "kaprodi", "semester dua" = "semester 2", ' +
                         '"kerja praktek" = "KP"). Jika ada informasi pada DATA REFERENSI yang ' +
@@ -98,4 +149,4 @@ const getChatResponse = async (req, res) => {
     }
 };
 
-module.exports = { getChatResponse };
+module.exports = { getChatResponse, selectReferences };
