@@ -17,6 +17,24 @@ function formatAnswer(answer) {
     return Array.isArray(answer) ? answer.join('\n') : String(answer ?? '');
 }
 
+// PERBAIKAN 1: kata kunci kosong ("") diabaikan.
+// Sebelumnya "".includes("") selalu true sehingga satu entri ikut terkirim
+// pada SETIAP pertanyaan.
+function validKeywords(item) {
+    return Array.isArray(item.keywords)
+        ? item.keywords.map(normalize).filter((keyword) => keyword.length > 0)
+        : [];
+}
+
+function toReference(items) {
+    return items
+        .map(
+            (item) =>
+                `Topik: ${validKeywords(item).join(', ')}\nInformasi: ${formatAnswer(item.answer)}`,
+        )
+        .join('\n\n');
+}
+
 const getChatResponse = async (req, res) => {
     const userMessage =
         typeof req.body?.message === 'string' ? req.body.message.trim() : '';
@@ -27,23 +45,14 @@ const getChatResponse = async (req, res) => {
 
     const normalizedMessage = normalize(userMessage);
     const matches = faq.filter((item) =>
-        Array.isArray(item.keywords) &&
-        item.keywords.some((keyword) =>
-            normalizedMessage.includes(normalize(keyword)),
-        ),
+        validKeywords(item).some((keyword) => normalizedMessage.includes(keyword)),
     );
 
-    if (matches.length === 0) {
-        return res.json({ response: noDataResponse });
-    }
-
-    const reference = matches
-        .slice(0, 4)
-        .map(
-            (item) =>
-                `Kata kunci: ${item.keywords.join(', ')}\nInformasi: ${formatAnswer(item.answer)}`,
-        )
-        .join('\n\n');
+    // PERBAIKAN 2: jika tidak ada kata kunci yang cocok (misalnya pertanyaan
+    // dengan susunan kata berbeda), seluruh FAQ dikirim sebagai referensi
+    // agar LLM tetap dapat menemukan informasi yang relevan.
+    const reference =
+        matches.length > 0 ? toReference(matches.slice(0, 4)) : toReference(faq);
 
     try {
         const chatCompletion = await groq.chat.completions.create({
@@ -54,11 +63,17 @@ const getChatResponse = async (req, res) => {
                     role: 'system',
                     content:
                         'Kamu adalah CIMAL, asisten Teknik Informatika UISU. ' +
-                        'Jawab pertanyaan akademik HANYA berdasarkan DATA REFERENSI ' +
-                        'yang diberikan. Jangan memakai pengetahuan luar, menambah ' +
-                        'fakta, atau menebak. Jika data tidak memuat jawaban, katakan ' +
-                        'bahwa informasi resmi belum tersedia. Pertahankan angka, ' +
-                        'nama, dan rincian persis seperti pada referensi.',
+                        'Jawab pertanyaan dalam bahasa Indonesia HANYA berdasarkan DATA REFERENSI. ' +
+                        // PERBAIKAN 3: instruksi diperjelas agar model tidak terlalu cepat menolak.
+                        'Pertanyaan pengguna bisa memakai kata yang berbeda dari data ' +
+                        '(misalnya "ketua prodi" = "kaprodi", "semester dua" = "semester 2", ' +
+                        '"kerja praktek" = "KP"). Jika ada informasi pada DATA REFERENSI yang ' +
+                        'menjawab pertanyaan, gunakan informasi tersebut. ' +
+                        'Jangan memakai pengetahuan luar, menambah fakta, atau menebak. ' +
+                        'Hanya jika DATA REFERENSI benar-benar tidak memuat jawabannya, ' +
+                        'katakan bahwa informasi resmi belum tersedia dan sarankan menghubungi ' +
+                        'Program Studi Teknik Informatika UISU. ' +
+                        'Pertahankan angka, nama, dan rincian persis seperti pada referensi.',
                 },
                 {
                     role: 'user',
