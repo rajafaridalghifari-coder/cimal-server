@@ -69,7 +69,7 @@ const getChatResponse = async (req, res) => {
             console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
             
             // Pesan default jika benar-benar tidak ada kata yang cocok di database
-            let jawabanDitemukan = "Mohon maaf, Cimal belum memiliki informasi terkait hal tersebut. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
             
             try {
                 const faqList = JSON.parse(faqDataString);
