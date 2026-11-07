@@ -241,7 +241,7 @@ const processAudio = async (req, res) => {
             .replace(/\bdsb\b/gi, "dan sebagainya")
             .replace(/\byg\b/gi, "yang");
 
-        console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
+       console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
 
         const idUnik = Date.now();
@@ -258,19 +258,25 @@ const processAudio = async (req, res) => {
             await tts.setMetadata('id-ID-GadisNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
             await tts.toFile(folderTarget, teksUntukSuara);
             
-            // HANYA MENGUBAH REQ.HEADERS.HOST AGAR DINAMIS MENGIKUTI IP
-            // DETEKSI PROTOKOL OTOMATIS (Lokal = http, Cloud/Railway = https)
-            const hostName = req.headers.host || "";
-            const protokol = (hostName.includes('192.168.') || hostName.includes('localhost')) ? 'http' : 'https';
-
-            const urlLokal = `${protokol}://${hostName}/public/${namaFolder}/audio.mp3`;
+            // ========================================================
+            // KODE URL PALING AMAN & STABIL
+            // ========================================================
+            const hostTarget = req.headers.host || "192.168.20.159:3000";
+            
+            let urlLokal = "";
+            if (hostTarget.includes("railway.app")) {
+                urlLokal = `https://${hostTarget}/public/${namaFolder}/audio.mp3`;
+            } else {
+                urlLokal = `http://${hostTarget}/public/${namaFolder}/audio.mp3`;
+            }
+            // ========================================================
             
             console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
             global.cimalResponseData = {
                 emotion: finalEmotion,
                 urls: [urlLokal] 
             };
-            console.log(`  -> Sukses! File audio "Gadis" dan emosi siap dijemput ESP32.`);
+            console.log(`  -> Sukses URL: ${urlLokal}`);
 
         } catch (ttsError) {
             console.error("[ERROR] Gagal generate suara dari Edge TTS:", ttsError.message);
