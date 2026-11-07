@@ -22,7 +22,7 @@ const getChatResponse = async (req, res) => {
             console.error("[WARNING] File faq.json tidak ditemukan untuk Chat.");
         }
 
-        // 2. SYSTEM PROMPT (ATURAN BARU)
+        // 2. SYSTEM PROMPT
         const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
         
         Data Resmi Prodi:
@@ -31,8 +31,8 @@ const getChatResponse = async (req, res) => {
         Aturan ketat:
         1. Jawab ramah, ringkas, dan sopan. 
         2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
-        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
+        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+        4. Jika pertanyaan terkait Prodi TI UISU TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
         6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
         
@@ -42,22 +42,21 @@ const getChatResponse = async (req, res) => {
         let finalAnswer = "";
         let butuhUpdate = false;
 
-        // 3. PROSES AI DENGAN FITUR KEBAL LIMIT (FALLBACK LOKAL)
+        // 3. PROSES AI: GROQ (UTAMA) -> OLLAMA (CADANGAN LOKAL)
         try {
-            console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Groq Qwen)...`);
+            console.log(`[CHAT TEKS] Sedang berpikir menggunakan Groq (Cloud)...`);
             const chatCompletion = await groq.chat.completions.create({
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userMessage }
                 ],
-                model: "qwen/qwen3.8-27b", // HANYA UBAH NAMA MODEL
+                model: "qwen/qwen3.8-27b", 
                 temperature: 0.2, 
                 max_tokens: 800,
             });
 
             const botReplyRaw = chatCompletion.choices[0].message.content;
             
-            // Parsing JSON dari Groq (Ditambah Try-Catch untuk keamanan)
             try {
                 let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
                 let parsedData = JSON.parse(cleanJson);
@@ -67,11 +66,11 @@ const getChatResponse = async (req, res) => {
                 finalAnswer = botReplyRaw;
             }
 
+            console.log(`✅ [CHAT TEKS] Sukses! Jawaban didapat dari Groq.`);
+
         } catch (apiError) {
-            // JIKA GROQ API ERROR / KENA LIMIT, JALANKAN MODE LOKAL OLLAMA
-            console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode AI Lokal (Ollama)...`);
-            
-            let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            console.error(`❌ [WARNING] Groq Limit/Error: ${apiError.message}`);
+            console.log(`🔄 [CHAT TEKS] Mengalihkan ke Otak Lokal (Ollama)...`);
             
             try {
                 const response = await fetch('http://localhost:11434/api/chat', {
@@ -93,19 +92,19 @@ const getChatResponse = async (req, res) => {
                 try {
                     let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
                     let parsedData = JSON.parse(cleanJson);
-                    jawabanDitemukan = parsedData.jawaban || botReplyRaw;
+                    finalAnswer = parsedData.jawaban || botReplyRaw;
                     butuhUpdate = parsedData.butuh_update || false;
-                    console.log(`[INFO LOKAL] Jawaban berhasil diselamatkan oleh Ollama.`);
                 } catch (jsonErr) {
-                    jawabanDitemukan = botReplyRaw;
+                    finalAnswer = botReplyRaw; 
                 }
 
+                console.log(`✅ [CHAT TEKS] Sukses! Jawaban diselamatkan oleh Ollama Lokal.`);
+
             } catch (ollamaError) {
-                console.error("Gagal menghubungi Ollama di mode lokal.");
+                console.error(`❌ [FATAL] Ollama Lokal juga gagal: ${ollamaError.message}`);
+                finalAnswer = "Mohon maaf, server AI CIMAL saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
                 butuhUpdate = true;
             }
-
-            finalAnswer = jawabanDitemukan;
         }
         
         // 4. LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
@@ -130,15 +129,14 @@ const getChatResponse = async (req, res) => {
             if (!isDuplicate) {
                 updateList.push(userMessage);
                 fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
-                console.log(`[INFO ADMIN] Chat: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userMessage}"`);
+                console.log(`📝 [INFO ADMIN] Chat: Pertanyaan baru ditambahkan ke log.`);
             }
         } 
 
-        console.log(`[CHAT TEKS] Jawaban berhasil dibuat: "${finalAnswer.substring(0, 50)}..."`);
         res.json({ response: finalAnswer });
         
     } catch (error) {
-        console.error("Error pada Groq API (Chat):", error);
+        console.error("Error Sistem di getChatResponse:", error);
         res.status(500).json({ error: "Terjadi kesalahan pada server AI CIMAL." });
     }
 };
