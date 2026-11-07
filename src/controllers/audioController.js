@@ -149,7 +149,7 @@ const processAudio = async (req, res) => {
             {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
 
             const modelGemini = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash",
+                model: "gemini-3.8-flash",
                 generationConfig: { responseMimeType: "application/json" } // Memaksa format balasan JSON murni
             });
 
