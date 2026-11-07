@@ -50,72 +50,59 @@ const getChatResponse = async (req, res) => {
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userMessage }
                 ],
-                model: "qwen/qwen3.8-27b", 
+                model: "qwen/qwen3.8-27b", // HANYA UBAH NAMA MODEL
                 temperature: 0.2, 
                 max_tokens: 800,
             });
 
             const botReplyRaw = chatCompletion.choices[0].message.content;
             
-            // Parsing JSON dari Groq
-            let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
-            let parsedData = JSON.parse(cleanJson);
-            
-            finalAnswer = parsedData.jawaban || botReplyRaw;
-            butuhUpdate = parsedData.butuh_update || false;
+            // Parsing JSON dari Groq (Ditambah Try-Catch untuk keamanan)
+            try {
+                let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
+                let parsedData = JSON.parse(cleanJson);
+                finalAnswer = parsedData.jawaban || botReplyRaw;
+                butuhUpdate = parsedData.butuh_update || false;
+            } catch (jsonErr) {
+                finalAnswer = botReplyRaw;
+            }
 
         } catch (apiError) {
-            // JIKA GROQ API ERROR / KENA LIMIT, JALANKAN MODE LOKAL PINTAR
-            console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            // JIKA GROQ API ERROR / KENA LIMIT, JALANKAN MODE LOKAL OLLAMA
+            console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode AI Lokal (Ollama)...`);
             
-            // Pesan default jika benar-benar tidak ada kata yang cocok di database
             let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
             
             try {
-                const faqList = JSON.parse(faqDataString);
-                const userTeksLower = userMessage.toLowerCase(); // Jika di audioController, ganti userMessage menjadi userText
+                const response = await fetch('http://localhost:11434/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "qwen2.5:1.5b", 
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: userMessage }
+                        ],
+                        stream: false
+                    })
+                });
+
+                const data = await response.json();
+                const botReplyRaw = data.message.content;
                 
-                let bestMatch = null;
-                let highestScore = 0;
-
-                // Memeriksa setiap data di database FAQ
-                for (let item of faqList) {
-                    let score = 0;
-                    const tanyaLower = item.pertanyaan.toLowerCase();
-                    
-                    // 1. Cek jika kalimatnya sama persis
-                    if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
-                        score += 10; 
-                    }
-
-                    // 2. Cek kecocokan per kata (mengatasi typo atau kalimat terbalik)
-                    const kataUser = userTeksLower.split(" ");
-                    for (let kata of kataUser) {
-                        // Abaikan kata hubung pendek (di, ke, dan, itu)
-                        if (kata.length > 3 && tanyaLower.includes(kata)) { 
-                            score += 1;
-                        }
-                    }
-
-                    // Simpan jawaban dengan skor kecocokan tertinggi
-                    if (score > highestScore) {
-                        highestScore = score;
-                        bestMatch = item.jawaban;
-                    }
+                try {
+                    let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
+                    let parsedData = JSON.parse(cleanJson);
+                    jawabanDitemukan = parsedData.jawaban || botReplyRaw;
+                    butuhUpdate = parsedData.butuh_update || false;
+                    console.log(`[INFO LOKAL] Jawaban berhasil diselamatkan oleh Ollama.`);
+                } catch (jsonErr) {
+                    jawabanDitemukan = botReplyRaw;
                 }
 
-                // Jika ada minimal 1 kata penting yang cocok, gunakan jawaban dari database
-                if (highestScore > 0 && bestMatch) {
-                    jawabanDitemukan = bestMatch;
-                    butuhUpdate = false; // Karena bisa dijawab, tidak perlu masuk log pembaruan
-                    if (typeof finalEmotion !== 'undefined') finalEmotion = "HAPPY";
-                    console.log(`[INFO LOKAL] Jawaban berhasil ditemukan di database (Skor: ${highestScore})`);
-                } else {
-                    butuhUpdate = true; // Benar-benar tidak ada di database, wajib masuk log
-                }
-
-            } catch (faqError) {
-                console.error("Gagal membaca faq.json di mode lokal.");
+            } catch (ollamaError) {
+                console.error("Gagal menghubungi Ollama di mode lokal.");
+                butuhUpdate = true;
             }
 
             finalAnswer = jawabanDitemukan;

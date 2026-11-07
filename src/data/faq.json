@@ -5,7 +5,7 @@
 
     },
     {
-        "keywords" : ["Fun fact cimal", "asal usul cimal yang sebenarnya", "aku Cindi Aulia Siregar yang Cantik"],
+        "keywords" : ["Fun fact cimal"],
         "answer" : " nama cimal sebenarnya adalah singkatan cindi dan akmal, nama cimal sendiri dicetuskan oleh akmal yang menginspirasi cindi untuk memberikan nama cimal ke robot Iot tugas akhir cindi karena cindi sangat menyukai nama ini."
     },
     {
@@ -15,10 +15,6 @@
         {
         "keywords": ["staff akademik", "staff prodi", "staff program studi", "admin sisfo"],
         "answer": "staff akademik program studi teknik informatika adalah abangda Habibi Lubis, S.E."
-    },
-    {
-        "keywords": ["kaprodi", "ketua program studi"],
-        "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
     },
     {
 
@@ -44,9 +40,15 @@
             "untuk mahasisiswa reguler cicilan pertama sebesar Rp. 1.200.000,-",
             "cicilan kedua sebesar Rp. 900.000,-",
             "cicilan ketiga sebesar Rp. 900.000,-",
+            "cicilan keempat sebesar Rp. 1.200.000,-",
+            "cicilan kelima sebesar Rp. 900.000,-",
+            "cicilan keenam sebesar Rp. 900.000,-",
             "untuk mahasisiswa non-reguler cicilan pertama sebesar Rp. 1.400.000,-",
             "cicilan kedua sebesar Rp. 1.050.000,-",
-             "cicilan ketiga sebesar Rp. 1.050.000,-"
+             "cicilan ketiga sebesar Rp. 1.050.000,-",
+             "cicilan keempat sebesar Rp. 1.400.000,-",
+             "cicilan kelima sebesar Rp. 1.050.000,-",
+             "cicilan keenam sebesar Rp. 1.050.000,-"
             ]
          },
     {
