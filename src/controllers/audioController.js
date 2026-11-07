@@ -165,11 +165,11 @@ const processAudio = async (req, res) => {
             butuhUpdate = parsedData.butuh_update || false;
 
         } catch (apiError) {
-            // JIKA GEMINI ERROR, JALANKAN MODE LOKAL PINTAR (Sesuai kodingan aslimu)
-            console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            // CETAK ERROR ASLI DARI GOOGLE GEMINI
+            console.error(`[FATAL GEMINI ERROR] :`, apiError.message);
             
-            // Pesan default jika benar-benar tidak ada kata yang cocok di database
-            let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            // Lanjut ke fallback cadangan lokal...
+            let jawabanDitemukan = "Mohon maaf, server cimal sedang sibuk...";
             
             try {
                 const faqList = JSON.parse(faqDataString);
