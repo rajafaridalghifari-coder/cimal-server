@@ -259,7 +259,11 @@ const processAudio = async (req, res) => {
             await tts.toFile(folderTarget, teksUntukSuara);
             
             // HANYA MENGUBAH REQ.HEADERS.HOST AGAR DINAMIS MENGIKUTI IP
-            const urlLokal = `http://${req.headers.host}/public/${namaFolder}/audio.mp3`;
+            // DETEKSI PROTOKOL OTOMATIS (Lokal = http, Cloud/Railway = https)
+            const hostName = req.headers.host || "";
+            const protokol = (hostName.includes('192.168.') || hostName.includes('localhost')) ? 'http' : 'https';
+
+            const urlLokal = `${protokol}://${hostName}/public/${namaFolder}/audio.mp3`;
             
             console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
             global.cimalResponseData = {
