@@ -81,7 +81,7 @@ const processAudio = async (req, res) => {
         if (io) io.emit('chat_update', { sender: 'user', text: userText });
 
         // ========================================================
-        // PROSES 3: SMART SEARCH (RAG - MENCARI JAWABAN DI FAQ LOKAL)
+        // PROSES 3: SMART SEARCH (MULTITASKING TANPA ANGKA URUT)
         // ========================================================
         console.log(`[PROSES 3] Mencari kecocokan di Pangkalan Data FAQ...`);
         let faqList = [];
@@ -91,18 +91,23 @@ const processAudio = async (req, res) => {
         } catch (e) { console.log(`[WARNING] Data FAQ tidak ditemukan.`); }
 
         const userTeksLower = userText.toLowerCase();
-        let bestMatchInfo = "";
-        let highestScore = 0;
+        let exactMatches = [];
+        let highestPartialScore = 0;
+        let bestPartialMatch = null;
 
         for (let item of faqList) {
             let score = 0;
-            const keywords = item.keywords || []; // Mengambil array keywords
+            let firstMentionIndex = 99999;
+            const keywords = item.keywords || [];
             
-            // Mengecek setiap kata kunci di dalam array
             for (let kw of keywords) {
                 const kwLower = kw.toLowerCase();
+                const indexPosisi = userTeksLower.indexOf(kwLower);
                 
-                if (userTeksLower.includes(kwLower) || kwLower.includes(userTeksLower)) score += 10; 
+                if (indexPosisi !== -1) {
+                    score += 10; 
+                    if (indexPosisi < firstMentionIndex) firstMentionIndex = indexPosisi;
+                }
 
                 const kataUser = userTeksLower.split(" ");
                 for (let kata of kataUser) {
@@ -110,35 +115,49 @@ const processAudio = async (req, res) => {
                 }
             }
 
-            // Jika skor tertinggi ditemukan, ambil nilainya dari item.answer
-            if (score > highestScore) {
-                highestScore = score;
-                if (Array.isArray(item.answer)) {
-                    bestMatchInfo = item.answer.join('\n');
-                } else {
-                    bestMatchInfo = item.answer;  
-                }
+            if (score >= 10) {
+                exactMatches.push({ answer: item.answer, posisi: firstMentionIndex });
+            } else if (score > 0 && score > highestPartialScore) {
+                highestPartialScore = score;
+                bestPartialMatch = item.answer;
             }
         }
 
-        let butuhUpdate = false;
-        let konteksSpesifik = "";
+        let combinedAnswers = [];
+        let isFound = false;
 
-        if (highestScore > 0 && bestMatchInfo) {
-            konteksSpesifik = bestMatchInfo;
-            console.log(`[INFO] Jawaban FAQ ditemukan (Skor: ${highestScore}). Menyiapkan untuk Ollama...`);
-        } else {
-            butuhUpdate = true;
-            konteksSpesifik = "TIDAK ADA DATA DI DATABASE. Cimal belum mengetahui informasi ini.";
+        if (exactMatches.length > 0) {
+            isFound = true;
+            exactMatches.sort((a, b) => a.posisi - b.posisi);
+            for (let match of exactMatches) {
+                // Langsung gabungkan array tanpa menambah nomor
+                if (Array.isArray(match.answer)) {
+                    combinedAnswers.push(match.answer.join('\n'));
+                } else {
+                    combinedAnswers.push(match.answer);
+                }
+            }
+        } else if (bestPartialMatch) {
+            isFound = true;
+            if (Array.isArray(bestPartialMatch)) {
+                combinedAnswers.push(bestPartialMatch.join('\n'));
+            } else {
+                combinedAnswers.push(bestPartialMatch);
+            }
         }
+
+        let butuhUpdate = !isFound;
+        let konteksSpesifik = isFound ? combinedAnswers.join('\n\n') : "TIDAK ADA DATA DI DATABASE.";
+        console.log(isFound ? `[INFO] ${exactMatches.length > 0 ? exactMatches.length : 1} Topik ditemukan.` : `[INFO] Pertanyaan baru!`);
 
         // ========================================================
         // PROSES 4: OLLAMA AI (MENJADIKAN BAHASA ROBOT LEBIH NATURAL)
         // ========================================================
-        const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Teknik Informatika UNIVERSITAS ISLAM SUMATERA UTARA (UISU).
+        const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Teknik Informatika UISU.
         
         Tugasmu HANYA menjawab MENGGUNAKAN DATA REFERENSI di bawah.
-        Aturan:
+        Aturan Penting:
+        Aturan Penting:
         1. Jawab ramah, ringkas, dan sopan. 
         2. DILARANG KERAS mengarang informasi akademik. Jika jawaban tidak ada di Data Resmi di atas, jangan mengarang.
         3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
@@ -146,9 +165,10 @@ const processAudio = async (req, res) => {
         5. Jika meminta data sensitif kampus, tolak demi privasi.
         6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
         7. Berikan kalimat pembuka sebelum memberikan daftar (contoh: "Berikut adalah materi KP di Teknik Informatika UISU:").
-        8. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
-        9. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
-        10. Wajib balas dengan JSON murni:
+        8. Jika pengguna menanyakan beberapa hal sekaligus, JAWAB SEMUANYA berdasarkan Data Referensi secara terstruktur dan berurutan.
+        9. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
+        10. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
+        11. Wajib balas dengan JSON murni:
         {"emotion": "NORMAL", "jawaban": "teks jawaban", "butuh_update": ${butuhUpdate}}`;
 
         let finalEmotion = "NORMAL";
@@ -166,7 +186,6 @@ const processAudio = async (req, res) => {
                     model: ollamaModel,
                     messages: [
                         { role: "system", content: systemPrompt },
-                        // INJEKSI KONTEKS TUNGGAL ANTI-HALU
                         { role: "user", content: `DATA REFERENSI:\n"${konteksSpesifik}"\n\nPERTANYAAN PENGGUNA:\n"${userText}"` }
                     ],
                     format: "json", 
@@ -186,8 +205,8 @@ const processAudio = async (req, res) => {
 
         } catch (apiError) {
             console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks mentah lokal...`);
-            finalAnswer = highestScore > 0 ? bestMatchInfo : "Mohon maaf, server cimal sedang sibuk. Silakan ke Tata Usaha.";
-            finalEmotion = highestScore > 0 ? "HAPPY" : "NORMAL";
+            finalAnswer = isFound ? konteksSpesifik : "Mohon maaf, server cimal sedang sibuk. Silakan ke Tata Usaha.";
+            finalEmotion = isFound ? "HAPPY" : "NORMAL";
         }
 
         // ========================================================
@@ -209,7 +228,12 @@ const processAudio = async (req, res) => {
         console.log(`  -> Teks Balasan: "${finalAnswer}"`);
 
         if (io) io.emit('chat_update', { sender: 'cimal', text: finalAnswer });
-        const teksUntukSuara = finalAnswer.replace(/[\*\#]/g, "").replace(/UISU/g, "Uisu");
+        
+        // Memastikan jeda antar poin dibaca natural oleh TTS
+        const teksUntukSuara = finalAnswer
+            .replace(/[\*\#]/g, "")
+            .replace(/UISU/g, "Uisu")
+            .replace(/\n/g, ". "); 
 
         console.log(`[PROSES 5] Text-to-Speech (Edge TTS)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 

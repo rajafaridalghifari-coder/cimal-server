@@ -22,22 +22,29 @@ const getChatResponse = async (req, res) => {
         }
 
         // ========================================================
-        // 2. SMART SEARCH (MENCARI JAWABAN DI DATABASE SEBELUM KE AI)
+        // 2. SMART SEARCH (MULTITASKING & AUTO-NUMBERING)
         // ========================================================
         console.log(`[PROSES] Mencari kecocokan di database lokal...`);
         const userTeksLower = userMessage.toLowerCase();
-        let bestMatchInfo = "";
-        let highestScore = 0;
+        
+        let exactMatches = []; 
+        let highestPartialScore = 0;
+        let bestPartialMatch = null;
 
         for (let item of faqList) {
             let score = 0;
+            let firstMentionIndex = 99999; 
             const keywords = item.keywords || [];
             
             for (let kw of keywords) {
                 const kwLower = kw.toLowerCase();
+                const indexPosisi = userTeksLower.indexOf(kwLower);
                 
-                if (userTeksLower.includes(kwLower) || kwLower.includes(userTeksLower)) {
+                if (indexPosisi !== -1) {
                     score += 10; 
+                    if (indexPosisi < firstMentionIndex) {
+                        firstMentionIndex = indexPosisi;
+                    }
                 }
 
                 const kataUser = userTeksLower.split(" ");
@@ -48,33 +55,55 @@ const getChatResponse = async (req, res) => {
                 }
             }
 
-            if (score > highestScore) {
-                highestScore = score;
-                // PERBAIKAN: Tangani jawaban berbentuk array agar rapi (pakai \n)
-                if (Array.isArray(item.answer)) {
-                    bestMatchInfo = item.answer.join('\n');
-                } else {
-                    bestMatchInfo = item.answer;
-                }
+            if (score >= 10) {
+                exactMatches.push({ answer: item.answer, posisi: firstMentionIndex });
+            } else if (score > 0 && score > highestPartialScore) {
+                highestPartialScore = score;
+                bestPartialMatch = item.answer;
             }
         }
 
-        let butuhUpdate = false;
-        let konteksSpesifik = "";
+        // Fungsi khusus untuk merapikan Array dan menambahkan nomor otomatis
+        const formatAnswer = (answerData) => {
+            if (Array.isArray(answerData)) {
+                let numberedArray = answerData.map((teks, index) => {
+                    // Cek apakah kalimat sudah diawali angka (misal "1. " atau "12. ")
+                    if (/^\d+\./.test(teks.trim())) {
+                        return teks; // Biarkan jika sudah bernomor
+                    } else {
+                        return `${index + 1}. ${teks}`; // Tambahkan nomor jika belum ada
+                    }
+                });
+                return numberedArray.join('\n');
+            }
+            return answerData;
+        };
 
-        if (highestScore > 0 && bestMatchInfo) {
-            konteksSpesifik = bestMatchInfo;
-            console.log(`[INFO] Jawaban FAQ ditemukan (Skor: ${highestScore}). Menyiapkan untuk diperhalus Ollama...`);
-        } else {
-            butuhUpdate = true;
-            konteksSpesifik = "TIDAK ADA DATA DI DATABASE.";
-            console.log(`[INFO] Pertanyaan baru! Tidak ada di FAQ.`);
+        let combinedAnswers = [];
+        let isFound = false;
+
+        // Jika ada jawaban yang cocok
+        if (exactMatches.length > 0) {
+            isFound = true;
+            exactMatches.sort((a, b) => a.posisi - b.posisi);
+            for (let match of exactMatches) {
+                combinedAnswers.push(formatAnswer(match.answer)); // Format nomor masuk di sini
+            }
+        } else if (bestPartialMatch) {
+            isFound = true;
+            combinedAnswers.push(formatAnswer(bestPartialMatch));
         }
 
+        let butuhUpdate = !isFound;
+        let konteksSpesifik = isFound ? combinedAnswers.join('\n\n') : "TIDAK ADA DATA DI DATABASE.";
+        console.log(isFound ? `[INFO] ${exactMatches.length > 0 ? exactMatches.length : 1} Topik ditemukan dan dirapikan.` : `[INFO] Pertanyaan baru!`);
+
         // ========================================================
-        // 3. PROSES AI (MEMPERHALUS BAHASA DARI KONTEKS YANG DITEMUKAN)
+        // 3. PROSES AI (MEMPERHALUS BAHASA DARI KONTEKS)
         // ========================================================
-        const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Prodi Teknik Informatika UNIVERSITAS ISLAM SUMATERA UTARA (UISU).
+        
+        // DI SINI TEMPAT ATURAN BARU DITAMBAHKAN (Di dalam systemPrompt)
+        const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
         
         Tugas utamamu HANYA SATU: Jawab pertanyaan pengguna MENGGUNAKAN DATA REFERENSI yang diberikan di bawah ini.
         
@@ -84,12 +113,14 @@ const getChatResponse = async (req, res) => {
         3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
         4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
-        6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF.
+        6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
         7. Berikan kalimat pembuka sebelum memberikan daftar (contoh: "Berikut adalah materi KP di Teknik Informatika UISU:").
-        8. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
-        9. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
-        10. Wajib balas dengan JSON murni:
+        8. Jika pengguna menanyakan beberapa hal sekaligus, JAWAB SEMUANYA berdasarkan Data Referensi secara terstruktur dan berurutan.
+        9. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
+        10. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
+        11. Wajib balas dengan JSON murni:
         {"emotion": "NORMAL", "jawaban": "teks jawaban", "butuh_update": ${butuhUpdate}}`;
+        
 
         let finalAnswer = "";
 
@@ -125,7 +156,7 @@ const getChatResponse = async (req, res) => {
 
         } catch (apiError) {
             console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks mentah lokal...`);
-            finalAnswer = highestScore > 0 ? bestMatchInfo : "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan ke Tata Usaha.";
+            finalAnswer = isFound ? konteksSpesifik : "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan ke Tata Usaha.";
         }
         
         // ========================================================
