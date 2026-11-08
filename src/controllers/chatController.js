@@ -20,17 +20,17 @@ const getChatResponse = async (req, res) => {
             console.error("[WARNING] File faq.json tidak ditemukan untuk Chat.");
         }
 
-        // 2. SYSTEM PROMPT (ATURAN BARU)
-        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
+        // 2. SYSTEM PROMPT (ATURAN SANGAT KETAT UNTUK MODEL LOKAL)
+        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU). KAMPUSMU HANYA UISU, BUKAN UGM ATAU KAMPUS LAIN.
         
-        Data Resmi Prodi:
+        BERIKUT ADALAH DATA RESMI PRODI UISU (JADIKAN INI SATU-SATUNYA SUMBER JAWABANMU):
         ${faqDataString}
         
         Aturan ketat:
         1. Jawab ramah, ringkas, dan sopan. 
-        2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
-        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
+        2. DILARANG KERAS mengarang informasi akademik. Jika jawaban tidak ada di Data Resmi di atas, jangan mengarang.
+        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+        4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
         6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
         
@@ -44,9 +44,9 @@ const getChatResponse = async (req, res) => {
         try {
             console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Ollama)...`);
             
-            // Mengambil URL dan Model Ollama dari env
+            // Menghapus spasi yang tidak sengaja terbawa di belakang nama model
             const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
-            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b "; 
+            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b"; 
 
             // Pemanggilan API Ollama
             const response = await fetch(ollamaUrl, {
@@ -58,12 +58,13 @@ const getChatResponse = async (req, res) => {
                     model: ollamaModel,
                     messages: [
                         { role: "system", content: systemPrompt },
-                        { role: "user", content: userMessage }
+                        // Injeksi konteks paksa di pesan user agar tidak halusinasi
+                        { role: "user", content: `Pertanyaan pengguna: "${userMessage}"\n(Ingat: Jawab HANYA berdasarkan Data Resmi UISU di atas, jangan sebut kampus lain)` }
                     ],
-                    format: "json", // Memaksa Ollama membalas dalam format JSON murni
+                    format: "json", 
                     stream: false,
                     options: {
-                        temperature: 0.2
+                        temperature: 0.1 // Suhu diturunkan drastis agar jawaban lebih kaku dan berbasis data
                     }
                 })
             });
@@ -83,11 +84,9 @@ const getChatResponse = async (req, res) => {
             butuhUpdate = parsedData.butuh_update || false;
 
         } catch (apiError) {
-            // JIKA OLLAMA ERROR / TIDAK AKTIF, JALANKAN MODE LOKAL PINTAR
             console.error(`[ERROR API OLLAMA] Detail:`, apiError.message || apiError); 
             console.error(`[WARNING] Ollama Error / Tidak Aktif! Beralih ke Mode Pencarian Database Lokal...`);
             
-            // Pesan default jika benar-benar tidak ada kata yang cocok di database
             let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
             
             try {
@@ -97,40 +96,34 @@ const getChatResponse = async (req, res) => {
                 let bestMatch = null;
                 let highestScore = 0;
 
-                // Memeriksa setiap data di database FAQ
                 for (let item of faqList) {
                     let score = 0;
                     const tanyaLower = item.pertanyaan.toLowerCase();
                     
-                    // 1. Cek jika kalimatnya sama persis
                     if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
                         score += 10; 
                     }
 
-                    // 2. Cek kecocokan per kata (mengatasi typo atau kalimat terbalik)
                     const kataUser = userTeksLower.split(" ");
                     for (let kata of kataUser) {
-                        // Abaikan kata hubung pendek (di, ke, dan, itu)
                         if (kata.length > 3 && tanyaLower.includes(kata)) { 
                             score += 1;
                         }
                     }
 
-                    // Simpan jawaban dengan skor kecocokan tertinggi
                     if (score > highestScore) {
                         highestScore = score;
                         bestMatch = item.jawaban;
                     }
                 }
 
-                // Jika ada minimal 1 kata penting yang cocok, gunakan jawaban dari database
                 if (highestScore > 0 && bestMatch) {
                     jawabanDitemukan = bestMatch;
-                    butuhUpdate = false; // Karena bisa dijawab, tidak perlu masuk log pembaruan
+                    butuhUpdate = false; 
                     if (typeof finalEmotion !== 'undefined') finalEmotion = "HAPPY";
                     console.log(`[INFO LOKAL] Jawaban berhasil ditemukan di database (Skor: ${highestScore})`);
                 } else {
-                    butuhUpdate = true; // Benar-benar tidak ada di database, wajib masuk log
+                    butuhUpdate = true; 
                 }
 
             } catch (faqError) {

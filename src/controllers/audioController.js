@@ -4,10 +4,7 @@ const fs = require('fs');
 const Groq = require('groq-sdk');
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts'); 
 
-// TAMBAHKAN BARIS INI UNTUK MEMPERBAIKI ERROR EDGE TTS DI RAILWAY
 global.crypto = require('crypto');
-
-// INISIALISASI GROQ (Tetap dipertahankan untuk fungsi Whisper STT)
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ========================================================
@@ -48,7 +45,6 @@ const storage = multer.diskStorage({
         cb(null, uploadDir); 
     },
     filename: function (req, file, cb) {
-        // Menyimpan format asli file agar bisa dicek nanti
         const ext = path.extname(file.originalname) || '.raw';
         cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + ext); 
     }
@@ -74,7 +70,6 @@ const processAudio = async (req, res) => {
         let audioPath = req.file.path; 
         const originalName = req.file.originalname.toLowerCase();
 
-        // LOGIKA PINTAR: Tambahkan deteksi .pcm sesuai kodingan ESP32 terbarumu
         if (originalName.endsWith('.raw') || originalName.endsWith('.pcm')) {
             console.log(`[PROSES 1] Format mentah dari ESP32 terdeteksi. Merakit WAV...`);
             rakitWavSempurna(audioPath);
@@ -103,7 +98,6 @@ const processAudio = async (req, res) => {
 
         console.log(`  -> Terdengar sebagai: "${userText}"`);
         
-        // Hapus file suara pengguna setelah diubah ke teks
         fs.unlinkSync(audioPath);
         if (io) io.emit('chat_update', { sender: 'user', text: userText });
 
@@ -121,30 +115,29 @@ const processAudio = async (req, res) => {
         let butuhUpdate = false;
 
         try {
-            // ========================================================
-            // PERUBAHAN KE OLLAMA (Local LLM)
-            // ========================================================
             console.log(`[PROSES 4] Berpikir menggunakan AI Utama (Ollama)...`);
-            const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
             
-            Data Resmi Prodi:
+            // Penegasan prompt agar model 1.5B tidak berhalusinasi ke kampus lain
+            const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU). KAMPUSMU HANYA UISU, BUKAN UGM ATAU KAMPUS LAIN.
+            
+            BERIKUT ADALAH DATA RESMI PRODI UISU (JADIKAN INI SATU-SATUNYA SUMBER JAWABANMU):
             ${faqDataString}
             
             Aturan ketat:
             1. Jawab ramah, ringkas, dan sopan. 
-            2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
-            3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-            4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
+            2. DILARANG KERAS mengarang informasi akademik. Jika jawaban tidak ada di Data Resmi di atas, jangan mengarang.
+            3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+            4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
             5. Jika meminta data sensitif kampus, tolak demi privasi.
             6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
             7. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
             
-            PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
+            PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks penjelasan apa pun:
             {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
 
-            // Mengambil URL dan Model Ollama dari env, dengan nilai default localhost
+            // PERBAIKAN SYNTAX ERROR DI SINI
             const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
-            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b "; // <-- Ubah sesuai nama model yang Anda download di Ollama
+            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b"; 
 
             const response = await fetch(ollamaUrl, {
                 method: 'POST',
@@ -155,12 +148,13 @@ const processAudio = async (req, res) => {
                     model: ollamaModel,
                     messages: [
                         { role: "system", content: systemPrompt },
-                        { role: "user", content: userText }
+                        // Penambahan injeksi konteks ke pesan pengguna agar model fokus ke UISU
+                        { role: "user", content: `Pertanyaan pengguna: "${userText}"\n(Ingat: Jawab HANYA berdasarkan Data Resmi UISU di atas, jangan sebut kampus lain)` }
                     ],
-                    format: "json", // Memaksa Ollama membalas dalam format JSON murni
+                    format: "json", 
                     stream: false,
                     options: {
-                        temperature: 0.2
+                        temperature: 0.1 // Suhu diturunkan dari 0.2 ke 0.1 agar jawaban lebih kaku (sesuai data FAQ) dan tidak kreatif mengarang
                     }
                 })
             });
@@ -183,7 +177,6 @@ const processAudio = async (req, res) => {
             console.error(`[ERROR API OLLAMA] Detail:`, apiError.message || apiError); 
             console.error(`[WARNING] Ollama Error / Tidak Aktif! Beralih ke Mode Pencarian Database Lokal...`);
             
-            // Pesan default jika benar-benar tidak ada kata yang cocok di database
             let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
             
             try {
@@ -193,40 +186,34 @@ const processAudio = async (req, res) => {
                 let bestMatch = null;
                 let highestScore = 0;
 
-                // Memeriksa setiap data di database FAQ
                 for (let item of faqList) {
                     let score = 0;
                     const tanyaLower = item.pertanyaan.toLowerCase();
                     
-                    // 1. Cek jika kalimatnya sama persis
                     if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
                         score += 10; 
                     }
 
-                    // 2. Cek kecocokan per kata (mengatasi typo atau kalimat terbalik)
                     const kataUser = userTeksLower.split(" ");
                     for (let kata of kataUser) {
-                        // Abaikan kata hubung pendek (di, ke, dan, itu)
                         if (kata.length > 3 && tanyaLower.includes(kata)) { 
                             score += 1;
                         }
                     }
 
-                    // Simpan jawaban dengan skor kecocokan tertinggi
                     if (score > highestScore) {
                         highestScore = score;
                         bestMatch = item.jawaban;
                     }
                 }
 
-                // Jika ada minimal 1 kata penting yang cocok, gunakan jawaban dari database
                 if (highestScore > 0 && bestMatch) {
                     jawabanDitemukan = bestMatch;
-                    butuhUpdate = false; // Karena bisa dijawab, tidak perlu masuk log pembaruan
+                    butuhUpdate = false; 
                     if (typeof finalEmotion !== 'undefined') finalEmotion = "HAPPY";
                     console.log(`[INFO LOKAL] Jawaban berhasil ditemukan di database (Skor: ${highestScore})`);
                 } else {
-                    butuhUpdate = true; // Benar-benar tidak ada di database, wajib masuk log
+                    butuhUpdate = true; 
                 }
 
             } catch (faqError) {
