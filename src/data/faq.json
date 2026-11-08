@@ -1,13 +1,24 @@
 [
     {
-    "keywords" : ["Pencipta cimal", "Pembuat cimal", "developer cimal"],
-     "answer" : "Cimal dibuat oleh dua mahasiswa program studi teknik informatika universitas islam sumatera utara (UISU) stambuk 23, robot IoT cimal dibuat oleh Cindi Aulia Siregar dan Aplikasi chat cimal dibuat oleh Raja Farid Al-ghifari. Cimal adalah singkatan dari Cerdas Informatif Mesin Automasi Layanan. Cimal merupakan hasil dari tugas akhir yang di bimbing oleh bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. dan bapak Rachmat Aulia, S.Kom., M.Sc.IT. Cimal dibuat untuk membantu mahasiswa prodi teknik informatika UISU dalam mendapatkan informasi akademik secara cepat dan akurat."
+    "keywords" : ["Pencipta cimal", "Pembuat cimal", "developer cimal","developer dirimu","developer mu","siapa yang buat kamu","siapa yang buat kau","kau siapa"],
+     "answer" : "Cimal dibuat oleh dua mahasiswa Program Studi Teknik Informatika Universitas Islam Sumatera Utara (UISU) stambuk 23, robot IoT cimal dibuat oleh Cindi Aulia Siregar dan Aplikasi chat Cimal dibuat oleh Raja Farid Al-ghifari. Cimal adalah singkatan dari Cerdas Informatif Mesin Automasi Layanan. Cimal merupakan hasil dari tugas akhir yang di bimbing oleh bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom. dan bapak Rachmat Aulia, S.Kom., M.Sc.IT. Cimal dibuat untuk membantu mahasiswa prodi teknik informatika UISU dalam mendapatkan informasi akademik secara cepat dan akurat."
 
     },
-    {
-        "keywords" : ["Fun fact cimal"],
-        "answer" : " nama cimal sebenarnya adalah singkatan cindi dan akmal, nama cimal sendiri dicetuskan oleh akmal yang menginspirasi cindi untuk memberikan nama cimal ke robot Iot tugas akhir cindi karena cindi sangat menyukai nama ini."
-    },
+  
+{
+  "keywords": ["apa saja informasi akademik","informasi akademik","jenis informasi akademik","informasi apa yang tersedia"],
+  "answer": [
+    "1. Informasi Dosen: daftar nama dosen, Ketua Program Studi (Kaprodi), dan staf akademik.",
+    "2. Informasi Mata Kuliah: daftar mata kuliah semester 1 sampai semester 8 beserta jumlah SKS setiap semester.",
+    "3. Informasi Kurikulum: kurikulum program studi, mata kuliah inti, silabus, dan mata kuliah pilihan berdasarkan peminatan Pemrograman, Robotika, dan Jaringan.",
+    "4. Informasi SPP: biaya kuliah mahasiswa reguler dan non-reguler, rincian cicilan, serta ketentuan pembayaran.",
+    "5. Informasi Biaya Praktikum: rincian biaya praktikum setiap mata kuliah praktikum.",
+    "6. Informasi Program Studi: visi, misi, tujuan, dan strategi pencapaian Program Studi Teknik Informatika.",
+    "7. Informasi Kerja Praktik (KP): persyaratan KP, materi KP, dan tata tertib pelaksanaan KP.",
+    "8. Informasi Skripsi: pengertian skripsi, persyaratan skripsi, materi atau topik skripsi, dan prosedur pelaksanaan skripsi.",
+    "9. Informasi Seminar Skripsi: persyaratan dan kelengkapan berkas pendaftaran seminar skripsi."
+  ]
+},
     {
         "keywords": ["kaprodi", "ketua program studi"],
         "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
@@ -224,7 +235,7 @@
         ]
     },
        {    
-        "keywords": ["mata kuliah pilihan", "mk pilihan", "mk pilihan"],
+        "keywords": ["mata kuliah pilihan", "mk pilihan", "matkul pilihan"],
         "answer": [
             "matakuliah pilihan peminatan pemrograman semester 7 adalah pengolahan citra digital dan aplikasi mobile",
             "matakuliah pilihan peminatan pemrograman semester 8 adalah sistem multimedia",
@@ -279,7 +290,7 @@
         ]
     },
         {    
-        "keywords": ["tatib kp", "tatib kerja praktek", "tat tertib kerja praktek", "tata tertib kp"],
+        "keywords": ["tatib kp", "tatib kerja praktek", "tata tertib kerja praktek", "tata tertib kp"],
         "answer": [
             "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.", 
             "2. Mahasiswa menjaga nama baik almamate",
@@ -294,7 +305,7 @@
         ]
     },
         {    
-        "keywords": ["syarat kp", "persyaratan kerja praktek", ""],
+        "keywords": ["syarat kp", "persyaratan kerja praktek", "syarat kerja praktek"],
         "answer": [
             "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.", 
             "2. Mahasiswa menjaga nama baik almamate",
