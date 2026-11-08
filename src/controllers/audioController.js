@@ -161,7 +161,11 @@ const processAudio = async (req, res) => {
             if (io) io.emit('chat_update', { sender: 'user', text: userText });
 
         } catch (apiError) {
-            console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+    // TAMBAHKAN BARIS INI UNTUK MELIHAT PENYEBAB ASLINYA:
+    console.error(`[ERROR API GEMINI] Detail:`, apiError.message || apiError); 
+
+    console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+    // ... (sisa kode tetap sama) ...
             
             // CATATAN PADA MODE LOKAL TANPA GROQ WHISPER:
             // Karena Groq STT dihapus dan Gemini STT gagal, kita tidak memiliki transkrip suara pengguna untuk dicari di FAQ lokal.
