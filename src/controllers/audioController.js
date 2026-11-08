@@ -7,14 +7,7 @@ const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 // TAMBAHKAN BARIS INI UNTUK MEMPERBAIKI ERROR EDGE TTS DI RAILWAY
 global.crypto = require('crypto');
 
-// INISIALISASI GROQ (Tetap dipertahankan untuk fungsi Whisper STT)
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-// ========================================================
-// TAMBAHAN: INISIALISASI GEMINI SEBAGAI OTAK UTAMA BARU
-// ========================================================
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ========================================================
 // FUNGSI PERAKIT WAV (KHUSUS HARDWARE ESP32)
@@ -127,10 +120,7 @@ const processAudio = async (req, res) => {
         let butuhUpdate = false;
 
         try {
-            // ========================================================
-            // PERUBAHAN HANYA DI SINI: MENGGUNAKAN GEMINI 2.5 FLASH
-            // ========================================================
-            console.log(`[PROSES 4] Berpikir menggunakan AI Utama (Google Gemini 2.5 Flash)...`);
+            console.log(`[PROSES 4] Berpikir menggunakan AI (Groq Qwen)...`);
             const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
             
             Data Resmi Prodi:
@@ -148,14 +138,17 @@ const processAudio = async (req, res) => {
             PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
             {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
 
-            const modelGemini = genAI.getGenerativeModel({ 
-                model: "gemini-3.8-flash",
-                generationConfig: { responseMimeType: "application/json" } // Memaksa format balasan JSON murni
+            const chatCompletion = await groq.chat.completions.create({
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userText }
+                ],
+                model: "llama-3.1-8b-instant", 
+                temperature: 0.2, 
+                max_tokens: 800,
             });
 
-            const promptGemini = systemPrompt + "\n\nPesan Pengguna: " + userText;
-            const result = await modelGemini.generateContent(promptGemini);
-            const botReplyRaw = result.response.text();
+            const botReplyRaw = chatCompletion.choices[0].message.content;
             
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
@@ -165,15 +158,16 @@ const processAudio = async (req, res) => {
             butuhUpdate = parsedData.butuh_update || false;
 
         } catch (apiError) {
-            // CETAK ERROR ASLI DARI GOOGLE GEMINI
-            console.error(`[FATAL GEMINI ERROR] :`, apiError.message);
+            // JIKA GROQ API ERROR / KENA LIMIT, JALANKAN MODE LOKAL PINTAR
+            console.error(`[WARNING] Groq API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
             
-            // Lanjut ke fallback cadangan lokal...
-            let jawabanDitemukan = "Mohon maaf, server cimal sedang sibuk...";
+            // Pesan default jika benar-benar tidak ada kata yang cocok di database
+            let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
+            
             
             try {
                 const faqList = JSON.parse(faqDataString);
-                const userTeksLower = userText.toLowerCase(); 
+                const userTeksLower = userMessage.toLowerCase(); // Jika di audioController, ganti userMessage menjadi userText
                 
                 let bestMatch = null;
                 let highestScore = 0;

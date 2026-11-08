@@ -1,7 +1,9 @@
-const Groq = require('groq-sdk');
+const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs');
 const path = require('path');
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// Inisialisasi SDK Gemini yang baru
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const getChatResponse = async (req, res) => {
     try {
@@ -22,7 +24,7 @@ const getChatResponse = async (req, res) => {
             console.error("[WARNING] File faq.json tidak ditemukan untuk Chat.");
         }
 
-        // 2. SYSTEM PROMPT
+        // 2. SYSTEM PROMPT (ATURAN BARU)
         const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
         
         Data Resmi Prodi:
@@ -31,8 +33,8 @@ const getChatResponse = async (req, res) => {
         Aturan ketat:
         1. Jawab ramah, ringkas, dan sopan. 
         2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
-        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        4. Jika pertanyaan terkait Prodi TI UISU TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
+        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+        4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
         6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
         
@@ -42,69 +44,86 @@ const getChatResponse = async (req, res) => {
         let finalAnswer = "";
         let butuhUpdate = false;
 
-        // 3. PROSES AI: GROQ (UTAMA) -> OLLAMA (CADANGAN LOKAL)
+        // 3. PROSES AI DENGAN FITUR KEBAL LIMIT (FALLBACK LOKAL)
         try {
-            console.log(`[CHAT TEKS] Sedang berpikir menggunakan Groq (Cloud)...`);
-            const chatCompletion = await groq.chat.completions.create({
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userMessage }
-                ],
-                model: "qwen/qwen3.8-27b", 
-                temperature: 0.2, 
-                max_tokens: 800,
+            console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Google Gemini 2.5 Flash)...`);
+            
+            // Pemanggilan API Gemini
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash", 
+                contents: userMessage,
+                config: {
+                    systemInstruction: systemPrompt,
+                    temperature: 0.2, 
+                    // Memaksa Gemini untuk selalu merespons dalam bentuk JSON yang valid
+                    responseMimeType: "application/json",
+                }
             });
 
-            const botReplyRaw = chatCompletion.choices[0].message.content;
+            const botReplyRaw = response.text;
             
-            try {
-                let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
-                let parsedData = JSON.parse(cleanJson);
-                finalAnswer = parsedData.jawaban || botReplyRaw;
-                butuhUpdate = parsedData.butuh_update || false;
-            } catch (jsonErr) {
-                finalAnswer = botReplyRaw;
-            }
-
-            console.log(`✅ [CHAT TEKS] Sukses! Jawaban didapat dari Groq.`);
+            // Parsing JSON dari Gemini (regex dipertahankan sesuai kode asli Anda untuk keamanan ekstra)
+            let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
+            let parsedData = JSON.parse(cleanJson);
+            
+            finalAnswer = parsedData.jawaban || botReplyRaw;
+            butuhUpdate = parsedData.butuh_update || false;
 
         } catch (apiError) {
-            console.error(`❌ [WARNING] Groq Limit/Error: ${apiError.message}`);
-            console.log(`🔄 [CHAT TEKS] Mengalihkan ke Otak Lokal (Ollama)...`);
+            // JIKA GEMINI API ERROR / KENA LIMIT, JALANKAN MODE LOKAL PINTAR
+            console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            
+            // Pesan default jika benar-benar tidak ada kata yang cocok di database
+            let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
             
             try {
-                const response = await fetch('http://localhost:11434/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: "qwen2.5:1.5b", 
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            { role: "user", content: userMessage }
-                        ],
-                        stream: false
-                    })
-                });
-
-                const data = await response.json();
-                const botReplyRaw = data.message.content;
+                const faqList = JSON.parse(faqDataString);
+                const userTeksLower = userMessage.toLowerCase();
                 
-                try {
-                    let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
-                    let parsedData = JSON.parse(cleanJson);
-                    finalAnswer = parsedData.jawaban || botReplyRaw;
-                    butuhUpdate = parsedData.butuh_update || false;
-                } catch (jsonErr) {
-                    finalAnswer = botReplyRaw; 
+                let bestMatch = null;
+                let highestScore = 0;
+
+                // Memeriksa setiap data di database FAQ
+                for (let item of faqList) {
+                    let score = 0;
+                    const tanyaLower = item.pertanyaan.toLowerCase();
+                    
+                    // 1. Cek jika kalimatnya sama persis
+                    if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
+                        score += 10; 
+                    }
+
+                    // 2. Cek kecocokan per kata (mengatasi typo atau kalimat terbalik)
+                    const kataUser = userTeksLower.split(" ");
+                    for (let kata of kataUser) {
+                        // Abaikan kata hubung pendek (di, ke, dan, itu)
+                        if (kata.length > 3 && tanyaLower.includes(kata)) { 
+                            score += 1;
+                        }
+                    }
+
+                    // Simpan jawaban dengan skor kecocokan tertinggi
+                    if (score > highestScore) {
+                        highestScore = score;
+                        bestMatch = item.jawaban;
+                    }
                 }
 
-                console.log(`✅ [CHAT TEKS] Sukses! Jawaban diselamatkan oleh Ollama Lokal.`);
+                // Jika ada minimal 1 kata penting yang cocok, gunakan jawaban dari database
+                if (highestScore > 0 && bestMatch) {
+                    jawabanDitemukan = bestMatch;
+                    butuhUpdate = false; // Karena bisa dijawab, tidak perlu masuk log pembaruan
+                    if (typeof finalEmotion !== 'undefined') finalEmotion = "HAPPY";
+                    console.log(`[INFO LOKAL] Jawaban berhasil ditemukan di database (Skor: ${highestScore})`);
+                } else {
+                    butuhUpdate = true; // Benar-benar tidak ada di database, wajib masuk log
+                }
 
-            } catch (ollamaError) {
-                console.error(`❌ [FATAL] Ollama Lokal juga gagal: ${ollamaError.message}`);
-                finalAnswer = "Mohon maaf, server AI CIMAL saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
-                butuhUpdate = true;
+            } catch (faqError) {
+                console.error("Gagal membaca faq.json di mode lokal.");
             }
+
+            finalAnswer = jawabanDitemukan;
         }
         
         // 4. LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
@@ -129,14 +148,15 @@ const getChatResponse = async (req, res) => {
             if (!isDuplicate) {
                 updateList.push(userMessage);
                 fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
-                console.log(`📝 [INFO ADMIN] Chat: Pertanyaan baru ditambahkan ke log.`);
+                console.log(`[INFO ADMIN] Chat: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userMessage}"`);
             }
         } 
 
+        console.log(`[CHAT TEKS] Jawaban berhasil dibuat: "${finalAnswer.substring(0, 50)}..."`);
         res.json({ response: finalAnswer });
         
     } catch (error) {
-        console.error("Error Sistem di getChatResponse:", error);
+        console.error("Error pada AI API (Chat):", error);
         res.status(500).json({ error: "Terjadi kesalahan pada server AI CIMAL." });
     }
 };
