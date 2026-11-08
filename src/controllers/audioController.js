@@ -1,20 +1,14 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const Groq = require('groq-sdk');
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts'); 
-
-// TAMBAHKAN BARIS INI UNTUK MEMPERBAIKI ERROR EDGE TTS DI RAILWAY
 global.crypto = require('crypto');
 
-// INISIALISASI GROQ (Tetap dipertahankan untuk fungsi Whisper STT)
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 // ========================================================
-// TAMBAHAN: INISIALISASI GEMINI SEBAGAI OTAK UTAMA BARU
+// INISIALISASI GEMINI DENGAN SDK TERBARU (@google/genai)
 // ========================================================
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const { GoogleGenAI } = require('@google/genai');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // ========================================================
 // FUNGSI PERAKIT WAV (KHUSUS HARDWARE ESP32)
@@ -54,7 +48,6 @@ const storage = multer.diskStorage({
         cb(null, uploadDir); 
     },
     filename: function (req, file, cb) {
-        // Menyimpan format asli file agar bisa dicek nanti
         const ext = path.extname(file.originalname) || '.raw';
         cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + ext); 
     }
@@ -66,7 +59,6 @@ const upload = multer({ storage: storage });
 // ========================================================
 const processAudio = async (req, res) => {
     const io = req.app.get('io');
-    let userText = "Suara diterima"; 
     
     console.log(`\n=================================================`);
     console.log(`[PROSES 1] Permintaan masuk! Memeriksa file audio...`);
@@ -94,26 +86,7 @@ const processAudio = async (req, res) => {
             console.log(`[PROSES 1] Format umum (${originalName}) dari Postman/App terdeteksi. Melewati perakitan WAV.`);
         }
 
-        console.log(`[PROSES 2] Mengirim audio ke Groq Whisper (Speech-to-Text)...`);
-        const transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(audioPath), 
-            model: "whisper-large-v3",
-            language: "id",
-            response_format: "json"
-        });
-
-        let rawText = transcription.text;
-        userText = rawText
-            .replace(/wisu|wisnu|uiso|wesu/gi, "uisu")
-            .replace(/cema|cimol|simal|cima/gi, "cimal");
-
-        console.log(`  -> Terdengar sebagai: "${userText}"`);
-        
-        // Hapus file suara pengguna setelah diubah ke teks
-        fs.unlinkSync(audioPath);
-        if (io) io.emit('chat_update', { sender: 'user', text: userText });
-
-        console.log(`[PROSES 3] Membaca Pangkalan Data FAQ...`);
+        console.log(`[PROSES 2] Membaca Pangkalan Data FAQ...`);
         let faqDataString = "";
         try {
             const faqPath = path.join(__dirname, '../data/faq.json');
@@ -122,103 +95,81 @@ const processAudio = async (req, res) => {
             console.log(`[WARNING] Data FAQ tidak ditemukan.`);
         }
 
+        let userText = "Suara diterima";
         let finalEmotion = "NORMAL";
         let finalAnswer = "";
         let butuhUpdate = false;
 
         try {
-            // ========================================================
-            // PERUBAHAN HANYA DI SINI: MENGGUNAKAN GEMINI 2.5 FLASH
-            // ========================================================
-            console.log(`[PROSES 4] Berpikir menggunakan AI Utama (Google Gemini 2.5 Flash)...`);
+            console.log(`[PROSES 3] Memproses Audio (Native Audio Gemini 2.5 Flash)...`);
+            
             const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
             
             Data Resmi Prodi:
             ${faqDataString}
             
             Aturan ketat:
-            1. Jawab ramah, ringkas, dan sopan. 
-            2. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
-            3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum (misal: apa itu AI, apa itu Python, pengertian skripsi/KP secara teori), JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-            4. Jika pertanyaan terkait program studi teknik informatika uisu TIDAK ADA di data, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
-            5. Jika meminta data sensitif kampus, tolak demi privasi.
-            6. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
-            7. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
+            1. Dengarkan pertanyaan dari file audio yang dikirimkan.
+            2. Jawab ramah, ringkas, dan sopan. 
+            3. DILARANG KERAS mengarang informasi akademik jika TIDAK ADA di Data Resmi Prodi.
+            4. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas, dan set "butuh_update" menjadi false.
+            5. Jika informasi TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut. Set nilai "butuh_update" menjadi true.
+            6. Jika meminta data sensitif kampus, tolak demi privasi.
+            7. Jika sekadar sapaan/umum, jawab natural dan set "butuh_update" menjadi false.
+            8. Tentukan emosi: [NORMAL, HAPPY, ANGRY, CUTE].
             
             PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
-            {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
+            {"transkrip_pertanyaan": "teks pertanyaan yang kamu dengar", "emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
 
-            const modelGemini = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash",
-                generationConfig: { responseMimeType: "application/json" } // Memaksa format balasan JSON murni
+            // Mengubah file audio menjadi format Base64 untuk Gemini
+            const audioBase64 = fs.readFileSync(audioPath).toString("base64");
+
+            // Pemanggilan API Gemini Native Audio
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash-native-audio-dialog",
+                contents: [
+                    {
+                        inlineData: {
+                            data: audioBase64,
+                            mimeType: "audio/wav"
+                        }
+                    },
+                    { text: "Jawab pertanyaan dari suara ini berdasarkan data akademik." }
+                ],
+                config: {
+                    systemInstruction: systemPrompt,
+                    temperature: 0.2, 
+                    responseMimeType: "application/json",
+                }
             });
 
-            const promptGemini = systemPrompt + "\n\nPesan Pengguna: " + userText;
-            const result = await modelGemini.generateContent(promptGemini);
-            const botReplyRaw = result.response.text();
+            const botReplyRaw = response.text;
             
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
             
+            // Mengambil teks pertanyaan (transkripsi internal Gemini)
+            userText = parsedData.transkrip_pertanyaan || "Suara tidak terdengar jelas";
+            userText = userText.replace(/wisu|wisnu|uiso|wesu/gi, "uisu").replace(/cema|cimol|simal|cima/gi, "cimal");
+            console.log(`  -> Terdengar sebagai: "${userText}"`);
+
             finalEmotion = parsedData.emotion || "NORMAL";
             finalAnswer = parsedData.jawaban || botReplyRaw;
             butuhUpdate = parsedData.butuh_update || false;
 
+            // Emit teks pertanyaan ke frontend (jika ada) setelah berhasil diparsing
+            if (io) io.emit('chat_update', { sender: 'user', text: userText });
+
         } catch (apiError) {
-            // JIKA GEMINI ERROR, JALANKAN MODE LOKAL PINTAR (Sesuai kodingan aslimu)
             console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
             
-            // Pesan default jika benar-benar tidak ada kata yang cocok di database
-            let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
-            
-            try {
-                const faqList = JSON.parse(faqDataString);
-                const userTeksLower = userText.toLowerCase(); 
-                
-                let bestMatch = null;
-                let highestScore = 0;
-
-                // Memeriksa setiap data di database FAQ
-                for (let item of faqList) {
-                    let score = 0;
-                    const tanyaLower = item.pertanyaan.toLowerCase();
-                    
-                    // 1. Cek jika kalimatnya sama persis
-                    if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
-                        score += 10; 
-                    }
-
-                    // 2. Cek kecocokan per kata (mengatasi typo atau kalimat terbalik)
-                    const kataUser = userTeksLower.split(" ");
-                    for (let kata of kataUser) {
-                        // Abaikan kata hubung pendek (di, ke, dan, itu)
-                        if (kata.length > 3 && tanyaLower.includes(kata)) { 
-                            score += 1;
-                        }
-                    }
-
-                    // Simpan jawaban dengan skor kecocokan tertinggi
-                    if (score > highestScore) {
-                        highestScore = score;
-                        bestMatch = item.jawaban;
-                    }
-                }
-
-                // Jika ada minimal 1 kata penting yang cocok, gunakan jawaban dari database
-                if (highestScore > 0 && bestMatch) {
-                    jawabanDitemukan = bestMatch;
-                    butuhUpdate = false; // Karena bisa dijawab, tidak perlu masuk log pembaruan
-                    if (typeof finalEmotion !== 'undefined') finalEmotion = "HAPPY";
-                    console.log(`[INFO LOKAL] Jawaban berhasil ditemukan di database (Skor: ${highestScore})`);
-                } else {
-                    butuhUpdate = true; // Benar-benar tidak ada di database, wajib masuk log
-                }
-
-            } catch (faqError) {
-                console.error("Gagal membaca faq.json di mode lokal.");
-            }
-
-            finalAnswer = jawabanDitemukan;
+            // CATATAN PADA MODE LOKAL TANPA GROQ WHISPER:
+            // Karena Groq STT dihapus dan Gemini STT gagal, kita tidak memiliki transkrip suara pengguna untuk dicari di FAQ lokal.
+            finalAnswer = "Mohon maaf, sistem pengenalan suara Cimal saat ini sedang mengalami gangguan. Silakan coba kembali nanti.";
+            butuhUpdate = false; 
+        } finally {
+            // Hapus file WAV setelah proses Gemini/Fallback selesai agar server tidak penuh
+            if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
         }
 
         // LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
@@ -240,7 +191,7 @@ const processAudio = async (req, res) => {
                 return existingText.includes(newText) || newText.includes(existingText);
             });
 
-            if (!isDuplicate) {
+            if (!isDuplicate && userText !== "Suara diterima" && userText !== "Suara tidak terdengar jelas") {
                 updateList.push(userText);
                 fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
                 console.log(`[INFO ADMIN] Audio: Pertanyaan baru ditambahkan ke pembaruan_database.json: "${userText}"`);
@@ -255,7 +206,7 @@ const processAudio = async (req, res) => {
             .replace(/[\*\#]/g, "")
             .replace(/UISU/g, "Uisu");
 
-        console.log(`[PROSES 5] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
+        console.log(`[PROSES 4] Mengubah teks menjadi suara (Edge TTS - GadisNeural)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
 
         const idUnik = Date.now();
@@ -274,7 +225,7 @@ const processAudio = async (req, res) => {
             
             const urlLokal = `https://${req.headers.host}/public/${namaFolder}/audio.mp3`;
             
-            console.log(`[PROSES 6] Menyimpan ke Antrean untuk ESP32...`);
+            console.log(`[PROSES 5] Menyimpan ke Antrean untuk ESP32...`);
             global.cimalResponseData = {
                 emotion: finalEmotion,
                 urls: [urlLokal] 
