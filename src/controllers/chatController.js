@@ -1,9 +1,5 @@
-const { GoogleGenAI } = require('@google/genai');
 const fs = require('fs');
 const path = require('path');
-
-// Inisialisasi SDK Gemini yang baru
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const getChatResponse = async (req, res) => {
     try {
@@ -46,23 +42,40 @@ const getChatResponse = async (req, res) => {
 
         // 3. PROSES AI DENGAN FITUR KEBAL LIMIT (FALLBACK LOKAL)
         try {
-            console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Google Gemini 2.5 Flash)...`);
+            console.log(`[CHAT TEKS] Sedang berpikir dan mencari jawaban (Ollama)...`);
             
-            // Pemanggilan API Gemini
-            const response = await ai.models.generateContent({
-                model: "gemini-3.8-live", 
-                contents: userMessage,
-                config: {
-                    systemInstruction: systemPrompt,
-                    temperature: 0.2, 
-                    // Memaksa Gemini untuk selalu merespons dalam bentuk JSON yang valid
-                    responseMimeType: "application/json",
-                }
+            // Mengambil URL dan Model Ollama dari env
+            const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
+            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b "; 
+
+            // Pemanggilan API Ollama
+            const response = await fetch(ollamaUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: ollamaModel,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userMessage }
+                    ],
+                    format: "json", // Memaksa Ollama membalas dalam format JSON murni
+                    stream: false,
+                    options: {
+                        temperature: 0.2
+                    }
+                })
             });
 
-            const botReplyRaw = response.text;
+            if (!response.ok) {
+                throw new Error(`Ollama HTTP Error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const botReplyRaw = data.message.content;
             
-            // Parsing JSON dari Gemini (regex dipertahankan sesuai kode asli Anda untuk keamanan ekstra)
+            // Parsing JSON dari Ollama
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
             
@@ -70,8 +83,9 @@ const getChatResponse = async (req, res) => {
             butuhUpdate = parsedData.butuh_update || false;
 
         } catch (apiError) {
-            // JIKA GEMINI API ERROR / KENA LIMIT, JALANKAN MODE LOKAL PINTAR
-            console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            // JIKA OLLAMA ERROR / TIDAK AKTIF, JALANKAN MODE LOKAL PINTAR
+            console.error(`[ERROR API OLLAMA] Detail:`, apiError.message || apiError); 
+            console.error(`[WARNING] Ollama Error / Tidak Aktif! Beralih ke Mode Pencarian Database Lokal...`);
             
             // Pesan default jika benar-benar tidak ada kata yang cocok di database
             let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";

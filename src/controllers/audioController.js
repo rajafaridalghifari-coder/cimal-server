@@ -11,12 +11,6 @@ global.crypto = require('crypto');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ========================================================
-// TAMBAHAN: INISIALISASI GEMINI SEBAGAI OTAK UTAMA BARU
-// ========================================================
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// ========================================================
 // FUNGSI PERAKIT WAV (KHUSUS HARDWARE ESP32)
 // ========================================================
 function rakitWavSempurna(filePath) {
@@ -128,9 +122,9 @@ const processAudio = async (req, res) => {
 
         try {
             // ========================================================
-            // PERUBAHAN HANYA DI SINI: MENGGUNAKAN GEMINI 2.5 FLASH
+            // PERUBAHAN KE OLLAMA (Local LLM)
             // ========================================================
-            console.log(`[PROSES 4] Berpikir menggunakan AI Utama (Google Gemini 2.5 Flash)...`);
+            console.log(`[PROSES 4] Berpikir menggunakan AI Utama (Ollama)...`);
             const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika Universitas Islam Sumatera Utara (UISU).
             
             Data Resmi Prodi:
@@ -148,14 +142,35 @@ const processAudio = async (req, res) => {
             PENTING! Kamu HANYA BOLEH membalas dalam format JSON murni tanpa teks lain:
             {"emotion": "NORMAL", "jawaban": "Halo! Ada yang bisa Cimal bantu?", "butuh_update": false}`;
 
-            const modelGemini = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash",
-                generationConfig: { responseMimeType: "application/json" } // Memaksa format balasan JSON murni
+            // Mengambil URL dan Model Ollama dari env, dengan nilai default localhost
+            const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
+            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b "; // <-- Ubah sesuai nama model yang Anda download di Ollama
+
+            const response = await fetch(ollamaUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: ollamaModel,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userText }
+                    ],
+                    format: "json", // Memaksa Ollama membalas dalam format JSON murni
+                    stream: false,
+                    options: {
+                        temperature: 0.2
+                    }
+                })
             });
 
-            const promptGemini = systemPrompt + "\n\nPesan Pengguna: " + userText;
-            const result = await modelGemini.generateContent(promptGemini);
-            const botReplyRaw = result.response.text();
+            if (!response.ok) {
+                throw new Error(`Ollama HTTP Error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const botReplyRaw = data.message.content;
             
             let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
             let parsedData = JSON.parse(cleanJson);
@@ -165,10 +180,8 @@ const processAudio = async (req, res) => {
             butuhUpdate = parsedData.butuh_update || false;
 
         } catch (apiError) {
-    // TAMBAHKAN BARIS INI UNTUK MELIHAT PENYEBAB ASLINYA:
-    console.error(`[ERROR API GEMINI] Detail:`, apiError.message || apiError); 
-
-    console.error(`[WARNING] Gemini API Terkena Limit/Error! Beralih ke Mode Pencarian Database Lokal...`);
+            console.error(`[ERROR API OLLAMA] Detail:`, apiError.message || apiError); 
+            console.error(`[WARNING] Ollama Error / Tidak Aktif! Beralih ke Mode Pencarian Database Lokal...`);
             
             // Pesan default jika benar-benar tidak ada kata yang cocok di database
             let jawabanDitemukan = "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan langsung ke bagian Tata Usaha.";
