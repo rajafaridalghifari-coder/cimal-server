@@ -96,18 +96,28 @@ const processAudio = async (req, res) => {
 
         for (let item of faqList) {
             let score = 0;
-            const tanyaLower = item.pertanyaan.toLowerCase();
+            const keywords = item.keywords || []; // Mengambil array keywords
             
-            if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) score += 10; 
+            // Mengecek setiap kata kunci di dalam array
+            for (let kw of keywords) {
+                const kwLower = kw.toLowerCase();
+                
+                if (userTeksLower.includes(kwLower) || kwLower.includes(userTeksLower)) score += 10; 
 
-            const kataUser = userTeksLower.split(" ");
-            for (let kata of kataUser) {
-                if (kata.length > 3 && tanyaLower.includes(kata)) score += 1;
+                const kataUser = userTeksLower.split(" ");
+                for (let kata of kataUser) {
+                    if (kata.length > 3 && kwLower.includes(kata)) score += 1;
+                }
             }
 
+            // Jika skor tertinggi ditemukan, ambil nilainya dari item.answer
             if (score > highestScore) {
                 highestScore = score;
-                bestMatchInfo = item.jawaban;
+                if (Array.isArray(item.answer)) {
+                    bestMatchInfo = item.answer.join('\n');
+                } else {
+                    bestMatchInfo = item.answer;  
+                }
             }
         }
 
@@ -134,8 +144,11 @@ const processAudio = async (req, res) => {
         3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
         4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
-        6. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
-        7. Wajib balas dengan JSON murni:
+        6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
+        7. Berikan kalimat pembuka sebelum memberikan daftar (contoh: "Berikut adalah materi KP di Teknik Informatika UISU:").
+        8. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
+        9. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
+        10. Wajib balas dengan JSON murni:
         {"emotion": "NORMAL", "jawaban": "teks jawaban", "butuh_update": ${butuhUpdate}}`;
 
         let finalEmotion = "NORMAL";

@@ -22,7 +22,7 @@ const getChatResponse = async (req, res) => {
         }
 
         // ========================================================
-        // 2. SMART SEARCH (PENCARI JAWABAN PASTI DI DATABASE)
+        // 2. SMART SEARCH (MENCARI JAWABAN DI DATABASE SEBELUM KE AI)
         // ========================================================
         console.log(`[PROSES] Mencari kecocokan di database lokal...`);
         const userTeksLower = userMessage.toLowerCase();
@@ -31,24 +31,31 @@ const getChatResponse = async (req, res) => {
 
         for (let item of faqList) {
             let score = 0;
-            const tanyaLower = item.pertanyaan.toLowerCase();
+            const keywords = item.keywords || [];
             
-            // Cek kalimat persis
-            if (userTeksLower.includes(tanyaLower) || tanyaLower.includes(userTeksLower)) {
-                score += 10; 
-            }
+            for (let kw of keywords) {
+                const kwLower = kw.toLowerCase();
+                
+                if (userTeksLower.includes(kwLower) || kwLower.includes(userTeksLower)) {
+                    score += 10; 
+                }
 
-            // Cek kecocokan per kata
-            const kataUser = userTeksLower.split(" ");
-            for (let kata of kataUser) {
-                if (kata.length > 3 && tanyaLower.includes(kata)) { 
-                    score += 1;
+                const kataUser = userTeksLower.split(" ");
+                for (let kata of kataUser) {
+                    if (kata.length > 3 && kwLower.includes(kata)) { 
+                        score += 1;
+                    }
                 }
             }
 
             if (score > highestScore) {
                 highestScore = score;
-                bestMatchInfo = item.jawaban;
+                // PERBAIKAN: Tangani jawaban berbentuk array agar rapi (pakai \n)
+                if (Array.isArray(item.answer)) {
+                    bestMatchInfo = item.answer.join('\n');
+                } else {
+                    bestMatchInfo = item.answer;
+                }
             }
         }
 
@@ -57,28 +64,31 @@ const getChatResponse = async (req, res) => {
 
         if (highestScore > 0 && bestMatchInfo) {
             konteksSpesifik = bestMatchInfo;
-            console.log(`[INFO] Jawaban FAQ ditemukan (Skor: ${highestScore}). Menyiapkan untuk Ollama...`);
+            console.log(`[INFO] Jawaban FAQ ditemukan (Skor: ${highestScore}). Menyiapkan untuk diperhalus Ollama...`);
         } else {
             butuhUpdate = true;
-            konteksSpesifik = "TIDAK ADA DATA DI DATABASE. Cimal belum mengetahui informasi ini.";
+            konteksSpesifik = "TIDAK ADA DATA DI DATABASE.";
             console.log(`[INFO] Pertanyaan baru! Tidak ada di FAQ.`);
         }
 
         // ========================================================
-        // 3. PROSES AI OLLAMA (HANYA MEMPERHALUS DATA REFERENSI)
+        // 3. PROSES AI (MEMPERHALUS BAHASA DARI KONTEKS YANG DITEMUKAN)
         // ========================================================
         const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Prodi Teknik Informatika UNIVERSITAS ISLAM SUMATERA UTARA (UISU).
         
         Tugas utamamu HANYA SATU: Jawab pertanyaan pengguna MENGGUNAKAN DATA REFERENSI yang diberikan di bawah ini.
         
-        Aturan:
-         1. Jawab ramah, ringkas, dan sopan. 
+        Aturan Penting:
+        1. Jawab ramah, ringkas, dan sopan. 
         2. DILARANG KERAS mengarang informasi akademik. Jika jawaban tidak ada di Data Resmi di atas, jangan mengarang.
         3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
         4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
         5. Jika meminta data sensitif kampus, tolak demi privasi.
-        6. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
-        7. Wajib balas dengan JSON murni:
+        6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF.
+        7. Berikan kalimat pembuka sebelum memberikan daftar (contoh: "Berikut adalah materi KP di Teknik Informatika UISU:").
+        8. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
+        9. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
+        10. Wajib balas dengan JSON murni:
         {"emotion": "NORMAL", "jawaban": "teks jawaban", "butuh_update": ${butuhUpdate}}`;
 
         let finalAnswer = "";
@@ -95,7 +105,6 @@ const getChatResponse = async (req, res) => {
                     model: ollamaModel,
                     messages: [
                         { role: "system", content: systemPrompt },
-                        // INJEKSI KONTEKS TUNGGAL ANTI-HALU
                         { role: "user", content: `DATA REFERENSI:\n"${konteksSpesifik}"\n\nPERTANYAAN PENGGUNA:\n"${userMessage}"` }
                     ],
                     format: "json", 
