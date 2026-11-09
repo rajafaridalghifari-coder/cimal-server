@@ -70,6 +70,44 @@ const getChatResponse = async (req, res) => {
 
         const normalizedQuestion = normalizeQuestion(userMessage);
 
+        
+        // --------------------------------------------------------
+        // DETEKSI VARIASI PERTANYAAN VISI
+        // --------------------------------------------------------
+
+        const visionPatterns = [
+            "visi",
+            "ingin menjadi seperti apa",
+            "akan menjadi seperti apa",
+            "cita cita program studi",
+            "arah pengembangan program studi",
+            "target program studi tahun 2027",
+            "tujuan jangka panjang program studi"
+        ];
+
+        const isVisionQuestion = visionPatterns.some(pattern =>
+            normalizedQuestion.includes(normalizeQuestion(pattern))
+        );
+
+        if (isVisionQuestion) {
+            const visionItem = faqList.find(item =>
+                Array.isArray(item.keywords) &&
+                item.keywords.some(keyword =>
+                    normalizeText(keyword) === "visi"
+                )
+            );
+
+            if (visionItem) {
+                combinedAnswers.push(formatAnswer(visionItem.answer));
+                isFound = true;
+
+                console.log(
+                    "[SMART SEARCH] Pertanyaan dikenali sebagai VISI."
+                );
+            }
+        }
+
+
         // Merapikan jawaban FAQ
         const formatAnswer = (answerData) => {
             if (Array.isArray(answerData)) {
