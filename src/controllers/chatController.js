@@ -17,7 +17,7 @@ const getChatResponse = async (req, res) => {
         try {
             const faqDataString = fs.readFileSync(faqPath, 'utf8');
             faqList = JSON.parse(faqDataString);
-        } catch (err) {
+        } catch (error) {
             console.error("[WARNING] File faq.json tidak ditemukan untuk Chat.");
         }
 
@@ -70,6 +70,25 @@ const getChatResponse = async (req, res) => {
 
         const normalizedQuestion = normalizeQuestion(userMessage);
 
+                // Merapikan jawaban FAQ
+        const formatAnswer = (answerData) => {
+            if (Array.isArray(answerData)) {
+                return answerData.map((text, index) => {
+                    if (/^\d+\./.test(String(text).trim())) {
+                        return text;
+                    }
+        
+                    return `${index + 1}. ${text}`;
+                }).join("\n");
+            }
+        
+            return typeof answerData === "string"
+                ? answerData
+                : "";
+        };
+        
+        let combinedAnswers = [];
+        let isFound = false;
         
         // --------------------------------------------------------
         // DETEKSI VARIASI PERTANYAAN VISI
