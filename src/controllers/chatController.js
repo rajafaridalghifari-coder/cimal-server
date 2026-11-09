@@ -105,7 +105,7 @@ const getChatResponse = async (req, res) => {
                     "[SMART SEARCH] Pertanyaan dikenali sebagai VISI."
                 );
             }
-        }
+        
 
 
         // Merapikan jawaban FAQ
