@@ -24,7 +24,7 @@
         "answer": "ketua program studi teknik informatika adalah Bapak Muhammad Zulfansyuri Siambaton, S.T., M.Kom."
     },
         {
-        "keywords": ["staff akademik", "staff prodi", "staff program studi", "admin sisfo"],
+        "keywords": ["staff akademik","staf akademik","staff prodi","staf prodi","staff program studi","staf program studi","admin sisfo","administrasi akademik","mengurus administrasi akademik","hubungi staf akademik","kontak staf akademik","siapa staf akademik"],
         "answer": "staff akademik program studi teknik informatika adalah abangda Habibi Lubis, S.E."
     },
     {
@@ -204,7 +204,7 @@
             "teknologi opensource",
             "matakuliah pilihan",
             "matakuliah pilihan",
-            " jumlah sks semester 6 adalah 20 sks."
+            " jumlah sks semester 7 adalah 20 sks."
         ]
     },
         {
@@ -291,21 +291,6 @@
     },
         {    
         "keywords": ["tatib kp", "tatib kerja praktek", "tata tertib kerja praktek", "tata tertib kp"],
-        "answer": [
-            "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.", 
-            "2. Mahasiswa menjaga nama baik almamate",
-            "3. Mahasiswa memakai tanda pengenal Kerja Praktek (Jika ada).", 
-            "4. Mahasiswa harus hadir sesuai dengan jadual jam kerja tempat Kerja Praktek.", 
-            "5. Mahasiswa dilarang merokok, meminum minuman keras, membawa senjata tajam, senjata api dan narkoba di lingkungan tempat KP.", 
-            "6. Mahasiswa harus menjaga kebersihan, keindahan dan kerapian.", 
-            "7. Mahasiswa harus menjaga etika, sopan santun, ketenangan, ketertiban dan ketentraman tempat KP.", 
-            "8. Mahasiswa harus mematuhi tata tertib tempat KP.", 
-            "9. Pelanggaran terhadap tata tertib dan tata tertib tempat kerja Praktek akan dikenakan sanksi.", 
-            "10. Hal-hal lain dapat menyesuaikan dengan kondisi di tempat KP."
-        ]
-    },
-        {    
-        "keywords": ["syarat kp", "persyaratan kerja praktek", "syarat kerja praktek"],
         "answer": [
             "1. Mahasiswa harus berpakaian bersih dan rapi, memakai kemeja, tidak berpakaian ketat dan harus memakai sepatu tertutup.", 
             "2. Mahasiswa menjaga nama baik almamate",
