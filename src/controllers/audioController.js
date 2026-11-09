@@ -53,7 +53,10 @@ const processAudio = async (req, res) => {
     console.log(`[PROSES 1] Permintaan audio masuk dari ESP32...`);
 
     try {
-        if (!req.file) return res.status(400).json({ status: 'error', message: 'File audio tidak ditemukan!' });
+        if (!req.file) {
+            res.set('Connection', 'close'); // Fix ESP32
+            return res.status(400).json({ status: 'error', message: 'File audio tidak ditemukan!' });
+        }
 
         let audioPath = req.file.path; 
         const originalName = req.file.originalname.toLowerCase();
@@ -77,11 +80,11 @@ const processAudio = async (req, res) => {
         userText = transcription.text.replace(/wisu|wisnu|uiso|wesu/gi, "uisu").replace(/cema|cimol|simal|cima/gi, "cimal");
         console.log(`  -> Terdengar sebagai: "${userText}"`);
         
-        fs.unlinkSync(audioPath); // Hapus audio sementara
+        fs.unlinkSync(audioPath); 
         if (io) io.emit('chat_update', { sender: 'user', text: userText });
 
         // ========================================================
-        // PROSES 3: SMART SEARCH (MULTITASKING TANPA ANGKA URUT)
+        // PROSES 3: SMART SEARCH (Hanya Ambil 1 Konteks Terbaik)
         // ========================================================
         console.log(`[PROSES 3] Mencari kecocokan di Pangkalan Data FAQ...`);
         let faqList = [];
@@ -91,23 +94,16 @@ const processAudio = async (req, res) => {
         } catch (e) { console.log(`[WARNING] Data FAQ tidak ditemukan.`); }
 
         const userTeksLower = userText.toLowerCase();
-        let exactMatches = [];
-        let highestPartialScore = 0;
-        let bestPartialMatch = null;
+        let bestMatchInfo = "";
+        let highestScore = 0;
 
         for (let item of faqList) {
             let score = 0;
-            let firstMentionIndex = 99999;
-            const keywords = item.keywords || [];
+            const keywords = item.keywords || []; 
             
             for (let kw of keywords) {
                 const kwLower = kw.toLowerCase();
-                const indexPosisi = userTeksLower.indexOf(kwLower);
-                
-                if (indexPosisi !== -1) {
-                    score += 10; 
-                    if (indexPosisi < firstMentionIndex) firstMentionIndex = indexPosisi;
-                }
+                if (userTeksLower.includes(kwLower) || kwLower.includes(userTeksLower)) score += 10; 
 
                 const kataUser = userTeksLower.split(" ");
                 for (let kata of kataUser) {
@@ -115,64 +111,55 @@ const processAudio = async (req, res) => {
                 }
             }
 
-            if (score >= 10) {
-                exactMatches.push({ answer: item.answer, posisi: firstMentionIndex });
-            } else if (score > 0 && score > highestPartialScore) {
-                highestPartialScore = score;
-                bestPartialMatch = item.answer;
-            }
-        }
-
-        let combinedAnswers = [];
-        let isFound = false;
-
-        if (exactMatches.length > 0) {
-            isFound = true;
-            exactMatches.sort((a, b) => a.posisi - b.posisi);
-            for (let match of exactMatches) {
-                // Langsung gabungkan array tanpa menambah nomor
-                if (Array.isArray(match.answer)) {
-                    combinedAnswers.push(match.answer.join('\n'));
+            // Memastikan HANYA mengambil SATU jawaban dengan skor tertinggi absolut
+            if (score > highestScore) {
+                highestScore = score;
+                if (Array.isArray(item.answer)) {
+                    bestMatchInfo = item.answer.join('\n');
                 } else {
-                    combinedAnswers.push(match.answer);
+                    bestMatchInfo = item.answer;  
                 }
             }
-        } else if (bestPartialMatch) {
-            isFound = true;
-            if (Array.isArray(bestPartialMatch)) {
-                combinedAnswers.push(bestPartialMatch.join('\n'));
-            } else {
-                combinedAnswers.push(bestPartialMatch);
-            }
         }
 
-        let butuhUpdate = !isFound;
-        let konteksSpesifik = isFound ? combinedAnswers.join('\n\n') : "TIDAK ADA DATA DI DATABASE.";
-        console.log(isFound ? `[INFO] ${exactMatches.length > 0 ? exactMatches.length : 1} Topik ditemukan.` : `[INFO] Pertanyaan baru!`);
+        let butuhUpdate = false;
+        let konteksSpesifik = "";
+
+        if (highestScore > 0 && bestMatchInfo) {
+            konteksSpesifik = bestMatchInfo;
+            console.log(`[INFO] Jawaban FAQ ditemukan (Skor: ${highestScore}). Menyiapkan untuk Ollama...`);
+        } else {
+            butuhUpdate = true;
+            konteksSpesifik = "TIDAK ADA DATA DI DATABASE. Cimal belum mengetahui informasi ini.";
+        }
 
         // ========================================================
-        // PROSES 4: OLLAMA AI (MENJADIKAN BAHASA ROBOT LEBIH NATURAL)
+        // PROSES 4: OLLAMA AI (PROMPT ANTI HALUSINASI)
         // ========================================================
-        const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Teknik Informatika UISU.
-        
-        Tugasmu HANYA menjawab MENGGUNAKAN DATA REFERENSI di bawah.
-        Aturan Penting:
-        Aturan Penting:
-        1. Jawab ramah, ringkas, dan sopan. 
-        2. DILARANG KERAS mengarang informasi akademik. Jika jawaban tidak ada di Data Resmi di atas, jangan mengarang.
-        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
-        5. Jika meminta data sensitif kampus, tolak demi privasi.
-        6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
-        7. Berikan kalimat pembuka sebelum memberikan daftar (contoh: "Berikut adalah materi KP di Teknik Informatika UISU:").
-        8. Jika pengguna menanyakan beberapa hal sekaligus, JAWAB SEMUANYA berdasarkan Data Referensi secara terstruktur dan berurutan.
-        9. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
-        10. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
-        11. Wajib balas dengan JSON murni:
-        {"emotion": "NORMAL", "jawaban": "teks jawaban", "butuh_update": ${butuhUpdate}}`;
+        const systemPrompt = `Kamu adalah CIMAL, asisten akademik Teknik Informatika UISU.
+TUGAS UTAMA: Menjawab pertanyaan murni HANYA berdasarkan DATA REFERENSI.
 
-        let finalEmotion = "NORMAL";
+ATURAN KETAT ANTI-HALUSINASI:
+        1. Jawab ramah, ringkas, dan sopan.
+        2. Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan) jika ada yang menyebut cimal berarti itu kamu.
+        3. JANGAN PERNAH menambahkan topik, istilah, atau kalimat pembuka yang tidak ada hubungannya dengan pertanyaan pengguna.
+        4. Jika pengguna bertanya soal Uang Kuliah, jawab soal Uang Kuliah. Jika Skripsi, jawab Skripsi. DILARANG KERAS mencampuradukkan topik (misal: menyebut Kerja Praktik/KP saat ditanya hal lain).
+        5. Langsung ke inti jawaban sesuai DATA REFERENSI dengan ramah dan natural.
+        6. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+        7. Jika referensi berupa daftar angka, bacakan poin-poin tersebut dengan rapi tanpa mengubah isinya.
+        8. Jika DATA REFERENSI berbunyi "TIDAK ADA DATA DI DATABASE", sampaikan mohon maaf dan arahkan mahasiswa ke Tata Usaha Prodi.
+        9. Sumber referensi akademik mutlak dari faq.json
+        10. Tentukan emosi yang sesuai (NORMAL, HAPPY, ANGRY, atau CUTE).
+
+WAJIB membalas MENGGUNAKAN FORMAT JSON SAJA seperti ini:
+{
+  "emotion": "NORMAL",
+  "jawaban": "Isi jawabanmu di sini",
+  "butuh_update": ${butuhUpdate}
+}`;
+
         let finalAnswer = "";
+        let finalEmotion = "NORMAL";
 
         try {
             console.log(`[PROSES 4] Memperhalus kalimat (Ollama)...`);
@@ -204,9 +191,9 @@ const processAudio = async (req, res) => {
             finalAnswer = parsedData.jawaban || cleanJson;
 
         } catch (apiError) {
-            console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks mentah lokal...`);
-            finalAnswer = isFound ? konteksSpesifik : "Mohon maaf, server cimal sedang sibuk. Silakan ke Tata Usaha.";
-            finalEmotion = isFound ? "HAPPY" : "NORMAL";
+            console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks lokal...`);
+            finalAnswer = highestScore > 0 ? bestMatchInfo : "Mohon maaf, server cimal sedang sibuk. Silakan ke Tata Usaha.";
+            finalEmotion = highestScore > 0 ? "HAPPY" : "NORMAL";
         }
 
         // ========================================================
@@ -228,12 +215,7 @@ const processAudio = async (req, res) => {
         console.log(`  -> Teks Balasan: "${finalAnswer}"`);
 
         if (io) io.emit('chat_update', { sender: 'cimal', text: finalAnswer });
-        
-        // Memastikan jeda antar poin dibaca natural oleh TTS
-        const teksUntukSuara = finalAnswer
-            .replace(/[\*\#]/g, "")
-            .replace(/UISU/g, "Uisu")
-            .replace(/\n/g, ". "); 
+        const teksUntukSuara = finalAnswer.replace(/[\*\#]/g, "").replace(/UISU/g, "Uisu");
 
         console.log(`[PROSES 5] Text-to-Speech (Edge TTS)...`);
         const publicFolder = path.join(process.cwd(), 'public'); 
@@ -256,6 +238,8 @@ const processAudio = async (req, res) => {
             throw new Error("Gagal membuat suara.");
         }
 
+        res.set('Connection', 'close'); // WAJIB UNTUK ESP32
+
         return res.status(200).json({
             status: 'success',
             data: { user_said: userText, cimal_reply: finalAnswer, emotion: finalEmotion }
@@ -263,6 +247,7 @@ const processAudio = async (req, res) => {
 
     } catch (error) {
         console.error(`\n[FATAL ERROR]`, error.message);
+        res.set('Connection', 'close'); 
         return res.status(500).json({ status: 'error', message: error.message });
     }
 };

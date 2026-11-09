@@ -55,8 +55,9 @@ const getChatResponse = async (req, res) => {
                 }
             }
 
+            // MENYIMPAN NILAI 'SCORE' UNTUK DISORTIR NANTI
             if (score >= 10) {
-                exactMatches.push({ answer: item.answer, posisi: firstMentionIndex });
+                exactMatches.push({ answer: item.answer, score: score, posisi: firstMentionIndex });
             } else if (score > 0 && score > highestPartialScore) {
                 highestPartialScore = score;
                 bestPartialMatch = item.answer;
@@ -67,11 +68,10 @@ const getChatResponse = async (req, res) => {
         const formatAnswer = (answerData) => {
             if (Array.isArray(answerData)) {
                 let numberedArray = answerData.map((teks, index) => {
-                    // Cek apakah kalimat sudah diawali angka (misal "1. " atau "12. ")
                     if (/^\d+\./.test(teks.trim())) {
-                        return teks; // Biarkan jika sudah bernomor
+                        return teks; 
                     } else {
-                        return `${index + 1}. ${teks}`; // Tambahkan nomor jika belum ada
+                        return `${index + 1}. ${teks}`; 
                     }
                 });
                 return numberedArray.join('\n');
@@ -82,13 +82,17 @@ const getChatResponse = async (req, res) => {
         let combinedAnswers = [];
         let isFound = false;
 
-        // Jika ada jawaban yang cocok
+        // LOGIKA PENYARINGAN KETAT ANTI NGAWUR (TOP 1 MATCH SAJA)
         if (exactMatches.length > 0) {
             isFound = true;
-            exactMatches.sort((a, b) => a.posisi - b.posisi);
-            for (let match of exactMatches) {
-                combinedAnswers.push(formatAnswer(match.answer)); // Format nomor masuk di sini
-            }
+            // Urutkan berdasarkan skor paling tinggi
+            exactMatches.sort((a, b) => {
+                if (b.score === a.score) return a.posisi - b.posisi;
+                return b.score - a.score;
+            });
+            // HANYA AMBIL 1 TOPIK TERATAS AGAR OLLAMA FOKUS
+            combinedAnswers.push(formatAnswer(exactMatches[0].answer)); 
+            
         } else if (bestPartialMatch) {
             isFound = true;
             combinedAnswers.push(formatAnswer(bestPartialMatch));
@@ -96,31 +100,34 @@ const getChatResponse = async (req, res) => {
 
         let butuhUpdate = !isFound;
         let konteksSpesifik = isFound ? combinedAnswers.join('\n\n') : "TIDAK ADA DATA DI DATABASE.";
-        console.log(isFound ? `[INFO] ${exactMatches.length > 0 ? exactMatches.length : 1} Topik ditemukan dan dirapikan.` : `[INFO] Pertanyaan baru!`);
+        console.log(isFound ? `[INFO] Topik paling relevan ditemukan dan dirapikan.` : `[INFO] Pertanyaan baru!`);
 
         // ========================================================
         // 3. PROSES AI (MEMPERHALUS BAHASA DARI KONTEKS)
         // ========================================================
+        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
         
-        // DI SINI TEMPAT ATURAN BARU DITAMBAHKAN (Di dalam systemPrompt)
-        const systemPrompt = `Kamu adalah CIMAL, asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
-        
-        Tugas utamamu HANYA SATU: Jawab pertanyaan pengguna MENGGUNAKAN DATA REFERENSI yang diberikan di bawah ini.
-        
-        Aturan Penting:
-        1. Jawab ramah, ringkas, dan sopan. 
-        2. DILARANG KERAS mengarang informasi akademik. Jika jawaban tidak ada di Data Resmi di atas, jangan mengarang.
-        3. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        4. Jika pertanyaan terkait akademik TIDAK ADA di data resmi, jawab jujur bahwa CIMAL belum memiliki info tersebut, dan arahkan ke staff akademik. Set nilai "butuh_update" menjadi true.
-        5. Jika meminta data sensitif kampus, tolak demi privasi.
-        6. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
-        7. Berikan kalimat pembuka sebelum memberikan daftar (contoh: "Berikut adalah materi KP di Teknik Informatika UISU:").
-        8. Jika pengguna menanyakan beberapa hal sekaligus, JAWAB SEMUANYA berdasarkan Data Referensi secara terstruktur dan berurutan.
-        9. Jika Data Referensi berisi beberapa informasi (seperti Visi dan Misi), jelaskan KEDUANYA dengan lengkap, jangan dipotong.
-        10. Tentukan emosi yang sesuai: [NORMAL, HAPPY, ANGRY, CUTE].
-        11. Wajib balas dengan JSON murni:
-        {"emotion": "NORMAL", "jawaban": "teks jawaban", "butuh_update": ${butuhUpdate}}`;
-        
+Tugas utamamu HANYA SATU: Jawab pertanyaan pengguna MENGGUNAKAN DATA REFERENSI.
+
+ATURAN KETAT ANTI-HALUSINASI:
+        1. Jawab ramah, ringkas, dan sopan.
+        2. Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan) jika ada yang menyebut cimal berarti itu kamu.
+        3. JANGAN PERNAH menambahkan topik, istilah, atau kalimat pembuka yang tidak ada hubungannya dengan pertanyaan pengguna.
+        4. Jika pengguna bertanya soal Uang Kuliah, jawab soal Uang Kuliah. Jika Skripsi, jawab Skripsi. DILARANG KERAS mencampuradukkan topik (misal: menyebut Kerja Praktik/KP saat ditanya hal lain).
+        5. Langsung ke inti jawaban sesuai DATA REFERENSI dengan ramah dan natural.
+        6. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+        7. Jika referensi berupa daftar angka, bacakan poin-poin tersebut dengan rapi tanpa mengubah isinya.
+        8. Jika DATA REFERENSI berbunyi "TIDAK ADA DATA DI DATABASE", sampaikan mohon maaf dan arahkan mahasiswa ke Tata Usaha Prodi.
+        9. Sumber referensi akademik mutlak dari faq.json
+        10. Tentukan emosi yang sesuai (NORMAL, HAPPY, ANGRY, atau CUTE).
+
+
+WAJIB membalas MENGGUNAKAN FORMAT JSON SAJA seperti ini:
+{
+  "emotion": "NORMAL",
+  "jawaban": "Isi jawabanmu di sini",
+  "butuh_update": ${butuhUpdate}
+}`;
 
         let finalAnswer = "";
 
@@ -155,7 +162,7 @@ const getChatResponse = async (req, res) => {
             finalAnswer = parsedData.jawaban || botReplyRaw;
 
         } catch (apiError) {
-            console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks mentah lokal...`);
+            console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks lokal...`);
             finalAnswer = isFound ? konteksSpesifik : "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan ke Tata Usaha.";
         }
         
