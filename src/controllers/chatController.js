@@ -21,87 +21,305 @@ const getChatResponse = async (req, res) => {
             console.error("[WARNING] File faq.json tidak ditemukan untuk Chat.");
         }
 
+         // ========================================================
+        // 2. SMART SEARCH (SEMANTIC KEYWORD + COURSE SEARCH)
         // ========================================================
-        // 2. SMART SEARCH (MULTITASKING & AUTO-NUMBERING)
-        // ========================================================
+
         console.log(`[PROSES] Mencari kecocokan di database lokal...`);
-        const userTeksLower = userMessage.toLowerCase();
-        
-        let exactMatches = []; 
-        let highestPartialScore = 0;
-        let bestPartialMatch = null;
 
-        for (let item of faqList) {
-            let score = 0;
-            let firstMentionIndex = 99999; 
-            const keywords = item.keywords || [];
-            
-            for (let kw of keywords) {
-                const kwLower = kw.toLowerCase();
-                const indexPosisi = userTeksLower.indexOf(kwLower);
-                
-                if (indexPosisi !== -1) {
-                    score += 10; 
-                    if (indexPosisi < firstMentionIndex) {
-                        firstMentionIndex = indexPosisi;
-                    }
-                }
+        // Normalisasi pertanyaan
+        const normalizeText = (text) => {
+            return String(text || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^\p{L}\p{N}]+/gu, " ")
+                .trim()
+                .replace(/\s+/g, " ");
+        };
 
-                const kataUser = userTeksLower.split(" ");
-                for (let kata of kataUser) {
-                    if (kata.length > 3 && kwLower.includes(kata)) { 
-                        score += 1;
-                    }
-                }
+        // Menyamakan variasi penulisan dan singkatan
+        const normalizeQuestion = (text) => {
+            let result = normalizeText(text);
+
+            const replacements = [
+                [/\bdua\b/g, "2"],
+                [/\btiga\b/g, "3"],
+                [/\bempat\b/g, "4"],
+                [/\blima\b/g, "5"],
+                [/\benam\b/g, "6"],
+                [/\btujuh\b/g, "7"],
+                [/\bdelapan\b/g, "8"],
+                [/\bpertama\b/g, "1"],
+                [/\bawal\b/g, "1"],
+                [/\bterakhir\b/g, "8"],
+                [/\bpbo\b/g, "pemrograman berorientasi objek"],
+                [/\bkkn\b/g, "kkn tematik"],
+                [/\bkaprodi\b/g, "ketua program studi"],
+                [/\bketua prodi\b/g, "ketua program studi"],
+                [/\bkepala prodi\b/g, "ketua program studi"],
+                [/\bstaff\b/g, "staf"]
+            ];
+
+            for (const [pattern, replacement] of replacements) {
+                result = result.replace(pattern, replacement);
             }
 
-            // MENYIMPAN NILAI 'SCORE' UNTUK DISORTIR NANTI
-            if (score >= 10) {
-                exactMatches.push({ answer: item.answer, score: score, posisi: firstMentionIndex });
-            } else if (score > 0 && score > highestPartialScore) {
-                highestPartialScore = score;
-                bestPartialMatch = item.answer;
-            }
-        }
+            return result.replace(/\s+/g, " ").trim();
+        };
 
-        // Fungsi khusus untuk merapikan Array dan menambahkan nomor otomatis
+        const normalizedQuestion = normalizeQuestion(userMessage);
+
+        // Merapikan jawaban FAQ
         const formatAnswer = (answerData) => {
             if (Array.isArray(answerData)) {
-                let numberedArray = answerData.map((teks, index) => {
-                    if (/^\d+\./.test(teks.trim())) {
-                        return teks; 
-                    } else {
-                        return `${index + 1}. ${teks}`; 
+                return answerData.map((text, index) => {
+                    if (/^\d+\./.test(String(text).trim())) {
+                        return text;
                     }
-                });
-                return numberedArray.join('\n');
+
+                    return `${index + 1}. ${text}`;
+                }).join("\n");
             }
-            return answerData;
+
+            return typeof answerData === "string"
+                ? answerData
+                : "";
         };
 
         let combinedAnswers = [];
         let isFound = false;
 
-        // LOGIKA PENYARINGAN KETAT ANTI NGAWUR (TOP 1 MATCH SAJA)
-        if (exactMatches.length > 0) {
-            isFound = true;
-            // Urutkan berdasarkan skor paling tinggi
-            exactMatches.sort((a, b) => {
-                if (b.score === a.score) return a.posisi - b.posisi;
-                return b.score - a.score;
-            });
-            // HANYA AMBIL 1 TOPIK TERATAS AGAR OLLAMA FOKUS
-            combinedAnswers.push(formatAnswer(exactMatches[0].answer)); 
-            
-        } else if (bestPartialMatch) {
-            isFound = true;
-            combinedAnswers.push(formatAnswer(bestPartialMatch));
+        // --------------------------------------------------------
+        // A. PENCARIAN KHUSUS NAMA MATA KULIAH
+        // --------------------------------------------------------
+
+        const courseAliases = [
+            "struktur data",
+            "pemrograman berorientasi objek",
+            "kecerdasan buatan",
+            "pemrograman web",
+            "kkn tematik"
+        ];
+
+        const asksCourseSemester =
+            /semester|diambil|dipelajari|diajarkan|dilaksanakan|mata kuliah apa|matkul apa/.test(normalizedQuestion);
+
+        let matchedCourse = courseAliases.find(course =>
+            normalizedQuestion.includes(course)
+        );
+
+        if (matchedCourse && asksCourseSemester) {
+
+            const foundSemesters = [];
+
+            for (const item of faqList) {
+                if (!item || !Array.isArray(item.keywords)) continue;
+
+                const semesterKeyword = item.keywords.find(keyword =>
+                    /^mata kuliah semester \d+$/.test(normalizeText(keyword))
+                );
+
+                if (!semesterKeyword) continue;
+
+                const semesterMatch = normalizeText(semesterKeyword)
+                    .match(/semester (\d+)/);
+
+                if (!semesterMatch) continue;
+
+                const semesterNumber = semesterMatch[1];
+
+                const answerItems = Array.isArray(item.answer)
+                    ? item.answer
+                    : [item.answer];
+
+                const courseExists = answerItems.some(answer =>
+                    normalizeText(answer).includes(matchedCourse)
+                );
+
+                if (courseExists) {
+                    foundSemesters.push(semesterNumber);
+                }
+            }
+
+            if (foundSemesters.length > 0) {
+                const uniqueSemesters = [...new Set(foundSemesters)];
+
+                const semesterText = uniqueSemesters
+                    .map(number => `semester ${number}`)
+                    .join(" dan ");
+
+                combinedAnswers.push(
+                    `Mata kuliah ${matchedCourse} terdapat pada ${semesterText}.`
+                );
+
+                isFound = true;
+
+                console.log(
+                    `[SMART SEARCH] Mata kuliah "${matchedCourse}" ditemukan pada ${semesterText}.`
+                );
+            }
         }
 
-        let butuhUpdate = !isFound;
-        let konteksSpesifik = isFound ? combinedAnswers.join('\n\n') : "TIDAK ADA DATA DI DATABASE.";
-        console.log(isFound ? `[INFO] Topik paling relevan ditemukan dan dirapikan.` : `[INFO] Pertanyaan baru!`);
+        // --------------------------------------------------------
+        // B. PENCARIAN SEMESTER BERDASARKAN NOMOR
+        // --------------------------------------------------------
 
+        if (!isFound) {
+
+            const semesterMatch = normalizedQuestion.match(
+                /semester ([1-8])/
+            );
+
+            if (semesterMatch) {
+                const semesterNumber = semesterMatch[1];
+
+                const asksSemesterCourses =
+                    /mata kuliah|matkul|belajar apa|pelajaran/.test(normalizedQuestion);
+
+                const asksSemesterSKS =
+                    /sks|satuan kredit/.test(normalizedQuestion);
+
+                const semesterItem = faqList.find(item =>
+                    Array.isArray(item.keywords) &&
+                    item.keywords.some(keyword =>
+                        normalizeText(keyword) ===
+                        `mata kuliah semester ${semesterNumber}`
+                    )
+                );
+
+                if (semesterItem && (asksSemesterCourses || asksSemesterSKS)) {
+
+                    if (asksSemesterSKS) {
+                        const answerItems = Array.isArray(semesterItem.answer)
+                            ? semesterItem.answer
+                            : [semesterItem.answer];
+
+                        const sksAnswer = answerItems.find(answer =>
+                            /jumlah sks semester/i.test(answer)
+                        );
+
+                        if (sksAnswer) {
+                            combinedAnswers.push(sksAnswer);
+                            isFound = true;
+                        }
+                    } else {
+                        combinedAnswers.push(
+                            `Berikut daftar mata kuliah semester ${semesterNumber}:\n` +
+                            formatAnswer(semesterItem.answer)
+                        );
+
+                        isFound = true;
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------------
+        // C. SMART SEARCH KEYWORD UMUM
+        // --------------------------------------------------------
+
+        if (!isFound) {
+
+            const stopWords = new Set([
+                "apa", "apakah", "saja", "yang", "dan", "atau",
+                "di", "ke", "dari", "untuk", "dengan", "bagaimana",
+                "gimana", "siapa", "berapa", "kapan", "dimana",
+                "mana", "adalah", "itu", "ini", "tentang",
+                "tolong", "jelaskan", "sebutkan", "mohon",
+                "informasi", "sekarang", "bisa", "tidak"
+            ]);
+
+            const questionWords = [
+                ...new Set(
+                    normalizedQuestion
+                        .split(" ")
+                        .filter(word => word.length > 2 && !stopWords.has(word))
+                )
+            ];
+
+            let bestMatch = null;
+            let highestScore = 0;
+
+            for (const item of faqList) {
+                if (!item || !Array.isArray(item.keywords)) continue;
+
+                for (const keyword of item.keywords) {
+                    if (typeof keyword !== "string") continue;
+
+                    const normalizedKeyword = normalizeQuestion(keyword);
+
+                    if (!normalizedKeyword) continue;
+
+                    const keywordWords = normalizedKeyword
+                        .split(" ")
+                        .filter(word => word.length > 2);
+
+                    let score = 0;
+
+                    if (normalizedQuestion === normalizedKeyword) {
+                        score = 100;
+                    } else if (
+                        ` ${normalizedQuestion} `.includes(
+                            ` ${normalizedKeyword} `
+                        )
+                    ) {
+                        score = 80 + keywordWords.length;
+                    } else {
+                        const matchedWords = keywordWords.filter(word =>
+                            questionWords.includes(word)
+                        );
+
+                        const coverage = keywordWords.length > 0
+                            ? matchedWords.length / keywordWords.length
+                            : 0;
+
+                        if (
+                            matchedWords.length >= 2 &&
+                            coverage >= 0.6
+                        ) {
+                            score = 40 + coverage * 20 + matchedWords.length;
+                        } else if (
+                            keywordWords.length === 1 &&
+                            matchedWords.length === 1
+                        ) {
+                            score = 35;
+                        }
+                    }
+
+                    if (score > highestScore) {
+                        highestScore = score;
+                        bestMatch = item;
+                    }
+                }
+            }
+
+            if (bestMatch && highestScore >= 35) {
+                combinedAnswers.push(formatAnswer(bestMatch.answer));
+                isFound = true;
+
+                console.log(
+                    `[SMART SEARCH] FAQ ditemukan dengan skor ${highestScore}.`
+                );
+            }
+        }
+
+        // --------------------------------------------------------
+        // D. MENYIAPKAN KONTEKS UNTUK OLLAMA
+        // --------------------------------------------------------
+
+        let butuhUpdate = !isFound;
+
+        let konteksSpesifik = isFound
+            ? combinedAnswers.join("\n\n")
+            : "TIDAK ADA DATA DI DATABASE.";
+
+        console.log(
+            isFound
+                ? `[INFO] Informasi ditemukan: ${konteksSpesifik.substring(0, 120)}`
+                : `[INFO] Pertanyaan belum ditemukan dalam FAQ.`
+        );
+       
         // ========================================================
         // 3. PROSES AI (MEMPERHALUS BAHASA DARI KONTEKS)
         // ========================================================
