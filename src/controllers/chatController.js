@@ -1,3 +1,4 @@
+
 const fs = require('fs');
 const path = require('path');
 
@@ -6,14 +7,20 @@ const getChatResponse = async (req, res) => {
         const userMessage = req.body.message;
 
         if (!userMessage) {
-            return res.status(400).json({ error: "Pesan tidak boleh kosong" });
+            return res.status(400).json({
+                error: "Pesan tidak boleh kosong"
+            });
         }
 
         console.log(`\n[CHAT TEKS] Pesan masuk dari Mobile App: "${userMessage}"`);
 
+        // ========================================================
         // 1. MEMBACA PANGKALAN DATA FAQ LOKAL
+        // ========================================================
+
         const faqPath = path.join(__dirname, '../data/faq.json');
         let faqList = [];
+
         try {
             const faqDataString = fs.readFileSync(faqPath, 'utf8');
             faqList = JSON.parse(faqDataString);
@@ -21,13 +28,13 @@ const getChatResponse = async (req, res) => {
             console.error("[WARNING] File faq.json tidak ditemukan untuk Chat.");
         }
 
-         // ========================================================
-        // 2. SMART SEARCH (SEMANTIC KEYWORD + COURSE SEARCH)
+        // ========================================================
+        // 2. SMART SEARCH
         // ========================================================
 
         console.log(`[PROSES] Mencari kecocokan di database lokal...`);
 
-        // Normalisasi pertanyaan
+        // Normalisasi teks
         const normalizeText = (text) => {
             return String(text || "")
                 .toLowerCase()
@@ -70,28 +77,29 @@ const getChatResponse = async (req, res) => {
 
         const normalizedQuestion = normalizeQuestion(userMessage);
 
-                // Merapikan jawaban FAQ
+        // Merapikan jawaban FAQ
         const formatAnswer = (answerData) => {
             if (Array.isArray(answerData)) {
                 return answerData.map((text, index) => {
                     if (/^\d+\./.test(String(text).trim())) {
                         return text;
                     }
-        
+
                     return `${index + 1}. ${text}`;
                 }).join("\n");
             }
-        
+
             return typeof answerData === "string"
                 ? answerData
                 : "";
         };
-        
+
+        // Variabel wajib dideklarasikan sebelum pencarian
         let combinedAnswers = [];
         let isFound = false;
-        
+
         // --------------------------------------------------------
-        // DETEKSI VARIASI PERTANYAAN VISI
+        // A. DETEKSI VARIASI PERTANYAAN VISI
         // --------------------------------------------------------
 
         const visionPatterns = [
@@ -124,31 +132,10 @@ const getChatResponse = async (req, res) => {
                     "[SMART SEARCH] Pertanyaan dikenali sebagai VISI."
                 );
             }
-        
-
-
-        // Merapikan jawaban FAQ
-        const formatAnswer = (answerData) => {
-            if (Array.isArray(answerData)) {
-                return answerData.map((text, index) => {
-                    if (/^\d+\./.test(String(text).trim())) {
-                        return text;
-                    }
-
-                    return `${index + 1}. ${text}`;
-                }).join("\n");
-            }
-
-            return typeof answerData === "string"
-                ? answerData
-                : "";
-        };
-
-        let combinedAnswers = [];
-        let isFound = false;
+        }
 
         // --------------------------------------------------------
-        // A. PENCARIAN KHUSUS NAMA MATA KULIAH
+        // B. PENCARIAN KHUSUS NAMA MATA KULIAH
         // --------------------------------------------------------
 
         const courseAliases = [
@@ -166,8 +153,7 @@ const getChatResponse = async (req, res) => {
             normalizedQuestion.includes(course)
         );
 
-        if (matchedCourse && asksCourseSemester) {
-
+        if (!isFound && matchedCourse && asksCourseSemester) {
             const foundSemesters = [];
 
             for (const item of faqList) {
@@ -219,11 +205,10 @@ const getChatResponse = async (req, res) => {
         }
 
         // --------------------------------------------------------
-        // B. PENCARIAN SEMESTER BERDASARKAN NOMOR
+        // C. PENCARIAN SEMESTER BERDASARKAN NOMOR
         // --------------------------------------------------------
 
         if (!isFound) {
-
             const semesterMatch = normalizedQuestion.match(
                 /semester ([1-8])/
             );
@@ -246,7 +231,6 @@ const getChatResponse = async (req, res) => {
                 );
 
                 if (semesterItem && (asksSemesterCourses || asksSemesterSKS)) {
-
                     if (asksSemesterSKS) {
                         const answerItems = Array.isArray(semesterItem.answer)
                             ? semesterItem.answer
@@ -273,11 +257,10 @@ const getChatResponse = async (req, res) => {
         }
 
         // --------------------------------------------------------
-        // C. SMART SEARCH KEYWORD UMUM
+        // D. SMART SEARCH KEYWORD UMUM
         // --------------------------------------------------------
 
         if (!isFound) {
-
             const stopWords = new Set([
                 "apa", "apakah", "saja", "yang", "dan", "atau",
                 "di", "ke", "dari", "untuk", "dengan", "bagaimana",
@@ -361,9 +344,9 @@ const getChatResponse = async (req, res) => {
             }
         }
 
-        // --------------------------------------------------------
-        // D. MENYIAPKAN KONTEKS UNTUK OLLAMA
-        // --------------------------------------------------------
+        // ========================================================
+        // 3. MENYIAPKAN KONTEKS UNTUK OLLAMA
+        // ========================================================
 
         let butuhUpdate = !isFound;
 
@@ -376,48 +359,43 @@ const getChatResponse = async (req, res) => {
                 ? `[INFO] Informasi ditemukan: ${konteksSpesifik.substring(0, 120)}`
                 : `[INFO] Pertanyaan belum ditemukan dalam FAQ.`
         );
-       
+
         // ========================================================
-        // 3. PROSES AI (MEMPERHALUS BAHASA DARI KONTEKS)
+        // 4. PROSES AI
         // ========================================================
+
         const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
-        
+
 Tugas utamamu HANYA SATU: Jawab pertanyaan pengguna MENGGUNAKAN DATA REFERENSI.
 
 ATURAN KETAT ANTI-HALUSINASI:
-        1. Jawab ramah, ringkas, dan sopan.
-        2. Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan) jika ada yang menyebut cimal berarti itu kamu.
-        3. JANGAN PERNAH menambahkan topik, istilah, atau kalimat pembuka yang tidak ada hubungannya dengan pertanyaan pengguna.
-        4. Jika pengguna bertanya soal Uang Kuliah, jawab soal Uang Kuliah. Jika Skripsi, jawab Skripsi. DILARANG KERAS mencampuradukkan topik (misal: menyebut Kerja Praktik/KP saat ditanya hal lain).
-        5. Langsung ke inti jawaban sesuai DATA REFERENSI dengan ramah dan natural.
-        6. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-        7. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
-        8. Jika DATA REFERENSI berbunyi "TIDAK ADA DATA DI DATABASE", sampaikan mohon maaf dan arahkan mahasiswa ke Tata Usaha Prodi.
-        9. Sumber referensi akademik mutlak dari faq.json
-        10. Tentukan emosi yang sesuai (NORMAL, HAPPY, ANGRY, atau CUTE).
+1. Jawab ramah, ringkas, dan sopan.
+2. Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan) jika ada yang menyebut cimal berarti itu kamu.
+3. JANGAN PERNAH menambahkan topik, istilah, atau kalimat pembuka yang tidak ada hubungannya dengan pertanyaan pengguna.
+4. Jika pengguna bertanya soal Uang Kuliah, jawab soal Uang Kuliah. Jika Skripsi, jawab Skripsi. DILARANG KERAS mencampuradukkan topik (misal: menyebut Kerja Praktik/KP saat ditanya hal lain).
+5. Langsung ke inti jawaban sesuai DATA REFERENSI dengan ramah dan natural.
+6. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
+7. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. Bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
+8. Jika DATA REFERENSI berbunyi "TIDAK ADA DATA DI DATABASE", sampaikan mohon maaf dan arahkan mahasiswa ke Tata Usaha Prodi.
+9. Sumber referensi akademik mutlak dari faq.json.
+10. Tentukan emosi yang sesuai (NORMAL, HAPPY, ANGRY, atau CUTE).
 
 ATURAN TAMBAHAN PEMAHAMAN DAN PARAFRASE:
 
 11. Pahami maksud pertanyaan pengguna, bukan hanya kata-kata yang digunakan.
-
 12. Jika pengguna menggunakan susunan kalimat berbeda tetapi memiliki maksud yang sama dengan informasi dalam DATA REFERENSI, gunakan informasi tersebut untuk menjawab.
-
 13. WAJIB memparafrasekan jawaban FAQ menggunakan kalimat sendiri yang natural, komunikatif, dan mudah dipahami.
-
 14. Jangan hanya menyalin isi FAQ secara mentah, kecuali untuk nama resmi, istilah akademik, angka, atau informasi yang harus dipertahankan.
-
 15. Pertahankan seluruh makna dan fakta dari DATA REFERENSI.
-
 16. Jangan mengubah nama orang, jabatan, nominal biaya, jumlah SKS, semester, persyaratan, atau informasi penting lainnya.
-
 17. Jika DATA REFERENSI berbentuk daftar, pertahankan seluruh poin dan urutannya. Susunan kalimat boleh diperbaiki tanpa menghilangkan informasi.
-
 18. Buat kalimat pembuka yang sesuai dengan topik pertanyaan pengguna.
-
 19. Hindari pembuka yang sama secara berulang dan jangan menggunakan pembuka generik yang tidak relevan.
-
 20. DILARANG menambahkan fakta, asumsi, atau informasi yang tidak tersedia dalam DATA REFERENSI.
 
+21. Jangan mengubah nama resmi Program Studi Teknik Informatika UISU menjadi nama lain.
+22. Jangan mengubah istilah, nama mata kuliah, atau nama jabatan yang tercantum dalam DATA REFERENSI.
+23. Jika DATA REFERENSI berisi angka atau daftar, pertahankan nilai dan seluruh urutannya.
 
 WAJIB membalas MENGGUNAKAN FORMAT JSON SAJA seperti ini:
 {
@@ -430,73 +408,130 @@ WAJIB membalas MENGGUNAKAN FORMAT JSON SAJA seperti ini:
 
         try {
             console.log(`[CHAT TEKS] Sedang merangkai kalimat (Ollama)...`);
-            const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
-            const ollamaModel = process.env.OLLAMA_MODEL || "qwen2.5:1.5b"; 
+
+            const ollamaUrl =
+                process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
+
+            const ollamaModel =
+                process.env.OLLAMA_MODEL || "qwen2.5:1.5b";
 
             const response = await fetch(ollamaUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({
                     model: ollamaModel,
                     messages: [
-                        { role: "system", content: systemPrompt },
-                        { role: "user", content: `DATA REFERENSI:\n"${konteksSpesifik}"\n\nPERTANYAAN PENGGUNA:\n"${userMessage}"` }
+                        {
+                            role: "system",
+                            content: systemPrompt
+                        },
+                        {
+                            role: "user",
+                            content: `DATA REFERENSI:\n"${konteksSpesifik}"\n\nPERTANYAAN PENGGUNA:\n"${userMessage}"`
+                        }
                     ],
-                    format: "json", 
+                    format: "json",
                     stream: false,
-                    options: { temperature: 0.1 }
+                    options: {
+                        temperature: 0.1
+                    }
                 })
             });
 
-            if (!response.ok) throw new Error(`Ollama HTTP Error: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`Ollama HTTP Error: ${response.status}`);
+            }
 
             const data = await response.json();
             const botReplyRaw = data.message.content;
-            
-            let cleanJson = botReplyRaw.replace(/```json/gi, '').replace(/```/gi, '').trim();
+
+            let cleanJson = botReplyRaw
+                .replace(/```json/gi, '')
+                .replace(/```/gi, '')
+                .trim();
+
             let parsedData = JSON.parse(cleanJson);
-            
+
             finalAnswer = parsedData.jawaban || botReplyRaw;
 
         } catch (apiError) {
-            console.error(`[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks lokal...`);
-            finalAnswer = isFound ? konteksSpesifik : "Mohon maaf, server cimal saat ini sedang sibuk. Silakan tanyakan ke Tata Usaha.";
+            console.error(
+                `[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks lokal...`,
+                apiError
+            );
+
+            finalAnswer = isFound
+                ? konteksSpesifik
+                : "Mohon maaf, server CIMAL saat ini sedang sibuk. Silakan tanyakan ke Tata Usaha.";
         }
-        
+
         // ========================================================
-        // 4. LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
+        // 5. LOGIKA MENYIMPAN PERTANYAAN TAK TERJAWAB
         // ========================================================
-        if (butuhUpdate === true || finalAnswer.includes("mengalami gangguan") || finalAnswer.includes("Tata Usaha")) {
-            const updatePath = path.join(__dirname, '../data/pembaruan_database.json');
+
+        if (
+            butuhUpdate === true ||
+            finalAnswer.includes("mengalami gangguan") ||
+            finalAnswer.includes("Tata Usaha")
+        ) {
+            const updatePath = path.join(
+                __dirname,
+                '../data/pembaruan_database.json'
+            );
+
             let updateList = [];
-            
+
             if (fs.existsSync(updatePath)) {
                 try {
-                    updateList = JSON.parse(fs.readFileSync(updatePath, 'utf8'));
+                    updateList = JSON.parse(
+                        fs.readFileSync(updatePath, 'utf8')
+                    );
                 } catch (e) {
-                    updateList = []; 
+                    updateList = [];
                 }
             }
-            
+
             const newText = userMessage.toLowerCase();
+
             let isDuplicate = updateList.some(existingQuestion => {
                 const existingText = existingQuestion.toLowerCase();
-                return existingText.includes(newText) || newText.includes(existingText);
+
+                return (
+                    existingText.includes(newText) ||
+                    newText.includes(existingText)
+                );
             });
 
             if (!isDuplicate) {
                 updateList.push(userMessage);
-                fs.writeFileSync(updatePath, JSON.stringify(updateList, null, 2));
-                console.log(`[INFO ADMIN] Chat: Pertanyaan baru disimpan ke pembaruan_database.json: "${userMessage}"`);
-            }
-        } 
 
-        console.log(`[CHAT TEKS] Jawaban berhasil dibuat: "${finalAnswer.substring(0, 70)}..."`);
-        res.json({ response: finalAnswer });
-        
+                fs.writeFileSync(
+                    updatePath,
+                    JSON.stringify(updateList, null, 2)
+                );
+
+                console.log(
+                    `[INFO ADMIN] Chat: Pertanyaan baru disimpan ke pembaruan_database.json: "${userMessage}"`
+                );
+            }
+        }
+
+        console.log(
+            `[CHAT TEKS] Jawaban berhasil dibuat: "${finalAnswer.substring(0, 70)}..."`
+        );
+
+        res.json({
+            response: finalAnswer
+        });
+
     } catch (error) {
         console.error("Error pada AI API (Chat):", error);
-        res.status(500).json({ error: "Terjadi kesalahan pada server AI CIMAL." });
+
+        res.status(500).json({
+            error: "Terjadi kesalahan pada server AI CIMAL."
+        });
     }
 };
 
