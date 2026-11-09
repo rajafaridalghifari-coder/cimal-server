@@ -226,7 +226,34 @@ WAJIB membalas MENGGUNAKAN FORMAT JSON SAJA seperti ini:
         try {
             const tts = new MsEdgeTTS();
             await tts.setMetadata('id-ID-GadisNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+            
+            // ========================================================
+            // TAMBAHAN UNTUK DATA TABEL 4.5 (SKRIPSI)
+            // ========================================================
+            const waktuMulaiTTS = Date.now();
+            
             await tts.toFile(folderTarget, teksUntukSuara);
+            
+            const waktuSelesaiTTS = Date.now(); 
+            const waktuKonversiEdge = waktuSelesaiTTS - waktuMulaiTTS; 
+            
+            const audioPath = path.join(folderTarget, 'audio.mp3'); 
+            let ukuranAudioBytes = 0;
+            if (fs.existsSync(audioPath)) {
+                ukuranAudioBytes = fs.statSync(audioPath).size; 
+            } else {
+                const files = fs.readdirSync(folderTarget);
+                if(files.length > 0) {
+                    ukuranAudioBytes = fs.statSync(path.join(folderTarget, files[0])).size;
+                }
+            }
+
+            console.log(`\n================ DATA PENGUJIAN TABEL 4.5 ================`);
+            console.log(`1. Panjang Karakter Teks : ${teksUntukSuara.length} Karakter`);
+            console.log(`2. Waktu Konversi Edge   : ${waktuKonversiEdge} ms`);
+            console.log(`3. Ukuran Audio (Bytes)  : ${ukuranAudioBytes} Bytes`);
+            console.log(`==========================================================\n`);
+            // ========================================================
             
             const urlLokal = `https://${req.headers.host}/public/${namaFolder}/audio.mp3`;
             
