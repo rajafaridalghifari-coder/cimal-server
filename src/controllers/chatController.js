@@ -364,107 +364,236 @@ const getChatResponse = async (req, res) => {
         // 4. PROSES AI
         // ========================================================
 
-        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Prodi Teknik Informatika UISU.
+      
+        // ========================================================
+        // 4. PROSES AI - OLLAMA DENGAN PENGAMAN FAQ
+        // ========================================================
 
-Tugas utamamu HANYA SATU: Jawab pertanyaan pengguna MENGGUNAKAN DATA REFERENSI.
+        const systemPrompt = `Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan), asisten AI pelayanan akademik Program Studi Teknik Informatika UISU.
+
+TUGAS UTAMA:
+Menghasilkan jawaban yang natural dan komunikatif berdasarkan DATA REFERENSI dari FAQ.
 
 ATURAN KETAT ANTI-HALUSINASI:
-1. Jawab ramah, ringkas, dan sopan.
-2. Kamu adalah CIMAL (Cerdas Informatif Mesin Automasi Layanan) jika ada yang menyebut cimal berarti itu kamu.
-3. JANGAN PERNAH menambahkan topik, istilah, atau kalimat pembuka yang tidak ada hubungannya dengan pertanyaan pengguna.
-4. Jika pengguna bertanya soal Uang Kuliah, jawab soal Uang Kuliah. Jika Skripsi, jawab Skripsi. DILARANG KERAS mencampuradukkan topik (misal: menyebut Kerja Praktik/KP saat ditanya hal lain).
-5. Langsung ke inti jawaban sesuai DATA REFERENSI dengan ramah dan natural.
-6. PENGECUALIAN: Jika pengguna bertanya tentang INFORMASI UMUM, ILMU KOMPUTER, PENGERTIAN TEKNOLOGI, atau IT secara umum, JAWABLAH dengan cerdas berdasarkan pengetahuan umummu, dan set "butuh_update" menjadi false.
-7. Jika Data Referensi berbentuk daftar (poin-poin, angka 1, 2, 3), KAMU WAJIB MENYAJIKANNYA KEMBALI DALAM BENTUK DAFTAR YANG RAPI KE BAWAH. JANGAN MENGGABUNGKANNYA MENJADI SATU PARAGRAF. Bacakan SECARA LENGKAP poin per poin. JANGAN DIGABUNG.
-8. Jika DATA REFERENSI berbunyi "TIDAK ADA DATA DI DATABASE", sampaikan mohon maaf dan arahkan mahasiswa ke Tata Usaha Prodi.
-9. Sumber referensi akademik mutlak dari faq.json.
-10. Tentukan emosi yang sesuai (NORMAL, HAPPY, ANGRY, atau CUTE).
 
-ATURAN TAMBAHAN PEMAHAMAN DAN PARAFRASE:
+1. DATA REFERENSI adalah satu-satunya sumber kebenaran informasi akademik.
+2. DILARANG menggunakan pengetahuan internal model untuk menambahkan informasi akademik yang tidak terdapat dalam DATA REFERENSI.
+3. DILARANG membuat, menebak, atau mengarang informasi.
+4. Jawab hanya sesuai topik yang ditanyakan pengguna.
+5. Jangan mencampurkan informasi dari topik FAQ yang berbeda.
+6. Jangan mengubah nama orang, jabatan, nama resmi program studi, nama mata kuliah, nominal uang, jumlah SKS, semester, persyaratan, tanggal, dan angka lainnya.
+7. Jangan menghilangkan informasi penting dari DATA REFERENSI.
+8. Jika DATA REFERENSI berbentuk daftar, pertahankan seluruh item, isi, dan urutannya. Jangan menghilangkan atau menggabungkan item.
+9. Jika DATA REFERENSI tidak tersedia, jangan membuat jawaban sendiri.
+10. Gunakan bahasa Indonesia yang sopan, ramah, ringkas, dan mudah dipahami.
 
-11. Pahami maksud pertanyaan pengguna, bukan hanya kata-kata yang digunakan.
-12. Jika pengguna menggunakan susunan kalimat berbeda tetapi memiliki maksud yang sama dengan informasi dalam DATA REFERENSI, gunakan informasi tersebut untuk menjawab.
-13. WAJIB memparafrasekan jawaban FAQ menggunakan kalimat sendiri yang natural, komunikatif, dan mudah dipahami.
-14. Jangan hanya menyalin isi FAQ secara mentah, kecuali untuk nama resmi, istilah akademik, angka, atau informasi yang harus dipertahankan.
-15. Pertahankan seluruh makna dan fakta dari DATA REFERENSI.
-16. Jangan mengubah nama orang, jabatan, nominal biaya, jumlah SKS, semester, persyaratan, atau informasi penting lainnya.
-17. Jika DATA REFERENSI berbentuk daftar, pertahankan seluruh poin dan urutannya. Susunan kalimat boleh diperbaiki tanpa menghilangkan informasi.
-18. Buat kalimat pembuka yang sesuai dengan topik pertanyaan pengguna.
-19. Hindari pembuka yang sama secara berulang dan jangan menggunakan pembuka generik yang tidak relevan.
-20. DILARANG menambahkan fakta, asumsi, atau informasi yang tidak tersedia dalam DATA REFERENSI.
+ATURAN PARAFRASE:
 
-21. Jangan mengubah nama resmi Program Studi Teknik Informatika UISU menjadi nama lain.
-22. Jangan mengubah istilah, nama mata kuliah, atau nama jabatan yang tercantum dalam DATA REFERENSI.
-23. Jika DATA REFERENSI berisi angka atau daftar, pertahankan nilai dan seluruh urutannya.
+11. Pahami maksud pertanyaan pengguna meskipun susunan kalimatnya berbeda.
+12. Buat jawaban dengan kalimat yang natural dan tidak harus sama persis dengan pertanyaan pengguna.
+13. Parafrasekan susunan kalimat berdasarkan DATA REFERENSI tanpa mengubah makna dan fakta.
+14. Nama resmi, istilah akademik, angka, nominal, jumlah SKS, semester, serta persyaratan harus dipertahankan.
+15. Untuk jawaban berbentuk daftar, pertahankan teks setiap item secara utuh dan urutannya. Kalimat pembuka boleh dibuat lebih natural.
+16. Jangan menambahkan pembuka yang tidak relevan.
+17. Jangan menyimpulkan sesuatu yang tidak disebutkan dalam DATA REFERENSI.
+18. Jika informasi tidak tersedia, sampaikan bahwa informasi belum tersedia dan arahkan pengguna ke Tata Usaha Prodi.
+19. Tentukan emosi yang sesuai: NORMAL, HAPPY, ANGRY, atau CUTE.
 
-WAJIB membalas MENGGUNAKAN FORMAT JSON SAJA seperti ini:
+FORMAT WAJIB:
+Kembalikan JSON yang valid saja:
 {
   "emotion": "NORMAL",
-  "jawaban": "Isi jawabanmu di sini",
+  "jawaban": "Jawaban berdasarkan DATA REFERENSI",
   "butuh_update": ${butuhUpdate}
 }`;
 
-        let finalAnswer = "";
+        // Mengambil fakta penting berupa angka dan satuan.
+        // Pemeriksaan ini membantu mendeteksi perubahan fakta oleh LLM.
+        const extractProtectedFacts = (text) => {
+            const source = String(text || "");
 
-        try {
-            console.log(`[CHAT TEKS] Sedang merangkai kalimat (Ollama)...`);
+            const patterns = [
+                /\bRp\.?\s*\d[\d.,]*/gi,
+                /\bIPK\s*[:=]?\s*\d+(?:[.,]\d+)?/gi,
+                /\bsemester\s+\d+\b/gi,
+                /\b\d+(?:[.,]\d+)?\s*(?:SKS|tahun|bulan|minggu|hari|jam|kali|orang)\b/gi,
+                /\b20\d{2}\b/g
+            ];
 
-            const ollamaUrl =
-                process.env.OLLAMA_URL || "http://localhost:11434/api/chat";
+            const facts = [];
 
-            const ollamaModel =
-                process.env.OLLAMA_MODEL || "qwen2.5:1.5b";
-
-            const response = await fetch(ollamaUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: ollamaModel,
-                    messages: [
-                        {
-                            role: "system",
-                            content: systemPrompt
-                        },
-                        {
-                            role: "user",
-                            content: `DATA REFERENSI:\n"${konteksSpesifik}"\n\nPERTANYAAN PENGGUNA:\n"${userMessage}"`
-                        }
-                    ],
-                    format: "json",
-                    stream: false,
-                    options: {
-                        temperature: 0.1
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Ollama HTTP Error: ${response.status}`);
+            for (const pattern of patterns) {
+                const matches = source.match(pattern) || [];
+                facts.push(...matches);
             }
 
-            const data = await response.json();
-            const botReplyRaw = data.message.content;
+            return [...new Set(
+                facts.map(fact => normalizeText(fact))
+            )];
+        };
 
-            let cleanJson = botReplyRaw
-                .replace(/```json/gi, '')
-                .replace(/```/gi, '')
-                .trim();
+        // Mengambil item daftar bernomor.
+        const extractNumberedItems = (text) => {
+            return String(text || "")
+                .split("\n")
+                .filter(line => /^\s*\d+\.\s+/.test(line))
+                .map(line =>
+                    normalizeText(line.replace(/^\s*\d+\.\s*/, ""))
+                );
+        };
 
-            let parsedData = JSON.parse(cleanJson);
+        // Memeriksa apakah fakta penting tetap dipertahankan.
+        const validateLLMAnswer = (source, generated) => {
+            const sourceFacts = extractProtectedFacts(source);
+            const generatedFacts = extractProtectedFacts(generated);
 
-            finalAnswer = parsedData.jawaban || botReplyRaw;
-
-        } catch (apiError) {
-            console.error(
-                `[WARNING] Ollama Error / Ngrok Mati! Beralih ke teks lokal...`,
-                apiError
+            const missingFacts = sourceFacts.filter(
+                fact => !generatedFacts.includes(fact)
             );
 
-            finalAnswer = isFound
-                ? konteksSpesifik
-                : "Mohon maaf, server CIMAL saat ini sedang sibuk. Silakan tanyakan ke Tata Usaha.";
+            const additionalFacts = generatedFacts.filter(
+                fact => !sourceFacts.includes(fact)
+            );
+
+            const sourceItems = extractNumberedItems(source);
+            const generatedItems = extractNumberedItems(generated);
+
+            const missingItems = sourceItems.filter(
+                item => !generatedItems.some(
+                    generatedItem => generatedItem.includes(item)
+                )
+            );
+
+            const listCountMismatch =
+                sourceItems.length > 0 &&
+                sourceItems.length !== generatedItems.length;
+
+            if (
+                missingFacts.length > 0 ||
+                additionalFacts.length > 0 ||
+                missingItems.length > 0 ||
+                listCountMismatch
+            ) {
+                console.warn("[VALIDASI LLM] Jawaban tidak sesuai FAQ.", {
+                    missingFacts,
+                    additionalFacts,
+                    missingItems,
+                    listCountMismatch
+                });
+
+                return false;
+            }
+
+            return true;
+        };
+
+        let finalAnswer = "";
+
+        // Jika FAQ tidak ditemukan, jangan izinkan model mengarang jawaban.
+        if (!isFound) {
+            finalAnswer =
+                "Mohon maaf, informasi tersebut belum tersedia dalam database FAQ. Silakan menghubungi Tata Usaha Program Studi Teknik Informatika UISU untuk mendapatkan informasi lebih lanjut.";
+        } else {
+            try {
+                console.log("[CHAT TEKS] Ollama sedang memparafrasekan jawaban FAQ...");
+
+                const ollamaUrl =
+                    process.env.OLLAMA_URL ||
+                    "http://localhost:11434/api/chat";
+
+                const ollamaModel =
+                    process.env.OLLAMA_MODEL ||
+                    "qwen2.5:1.5b";
+
+                const response = await fetch(ollamaUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: ollamaModel,
+                        messages: [
+                            {
+                                role: "system",
+                                content: systemPrompt
+                            },
+                            {
+                                role: "user",
+                                content:
+                                    `DATA REFERENSI FAQ:\n${konteksSpesifik}\n\n` +
+                                    `PERTANYAAN PENGGUNA:\n${userMessage}\n\n` +
+                                    `Buat jawaban yang natural berdasarkan FAQ. ` +
+                                    `Jangan mengubah fakta, angka, atau isi daftar.`
+                            }
+                        ],
+                        format: "json",
+                        stream: false,
+                        options: {
+                            temperature: 0.1
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Ollama HTTP Error: ${response.status}`
+                    );
+                }
+
+                const data = await response.json();
+
+                const botReplyRaw = data?.message?.content;
+
+                if (!botReplyRaw) {
+                    throw new Error("Respons Ollama kosong.");
+                }
+
+                const cleanJson = botReplyRaw
+                    .replace(/```json/gi, "")
+                    .replace(/```/gi, "")
+                    .trim();
+
+                const parsedData = JSON.parse(cleanJson);
+
+                const generatedAnswer =
+                    typeof parsedData.jawaban === "string"
+                        ? parsedData.jawaban.trim()
+                        : "";
+
+                if (!generatedAnswer) {
+                    throw new Error("Jawaban LLM tidak valid.");
+                }
+
+                // Validasi hasil parafrase dengan FAQ.
+                const isValid = validateLLMAnswer(
+                    konteksSpesifik,
+                    generatedAnswer
+                );
+
+                if (isValid) {
+                    finalAnswer = generatedAnswer;
+
+                    console.log(
+                        "[VALIDASI LLM] Jawaban sesuai dengan fakta FAQ."
+                    );
+                } else {
+                    // Jika hasil LLM berubah, gunakan sumber FAQ.
+                    finalAnswer = konteksSpesifik;
+
+                    console.warn(
+                        "[VALIDASI LLM] Menggunakan jawaban asli FAQ sebagai fallback."
+                    );
+                }
+
+            } catch (apiError) {
+                console.error(
+                    "[WARNING] Ollama gagal memproses jawaban FAQ:",
+                    apiError
+                );
+
+                // Fallback saat server AI gagal.
+                finalAnswer = konteksSpesifik;
+            }
         }
 
         // ========================================================
