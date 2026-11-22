@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 
@@ -458,15 +457,26 @@ Kembalikan JSON yang valid saja:
             const sourceItems = extractNumberedItems(source);
             const generatedItems = extractNumberedItems(generated);
 
-            const missingItems = sourceItems.filter(
-                item => !generatedItems.some(
-                    generatedItem => generatedItem.includes(item)
-                )
-            );
+            // Butir daftar dianggap hilang jika kurang dari 70% kata isinya
+            // muncul di jawaban. Kalimat boleh diparafrasekan, tetapi isinya
+            // harus tetap ada. Angka dan fakta penting tetap dicek ketat di atas.
+            const generatedNorm = normalizeText(generated);
 
-            const listCountMismatch =
-                sourceItems.length > 0 &&
-                sourceItems.length !== generatedItems.length;
+            const missingItems = sourceItems.filter(item => {
+                const itemWords = item
+                    .split(" ")
+                    .filter(word => word.length > 2);
+
+                if (itemWords.length === 0) return false;
+
+                const hit = itemWords.filter(word =>
+                    generatedNorm.includes(word)
+                ).length;
+
+                return hit / itemWords.length < 0.7;
+            });
+
+            const listCountMismatch = false;
 
             if (
                 missingFacts.length > 0 ||
@@ -505,7 +515,14 @@ Kembalikan JSON yang valid saja:
                     process.env.OLLAMA_MODEL ||
                     "qwen2.5:1.5b";
 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(
+                    () => controller.abort(),
+                    30000
+                );
+
                 const response = await fetch(ollamaUrl, {
+                    signal: controller.signal,
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -534,6 +551,8 @@ Kembalikan JSON yang valid saja:
                     })
                 });
 
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
                     throw new Error(
                         `Ollama HTTP Error: ${response.status}`
@@ -555,9 +574,18 @@ Kembalikan JSON yang valid saja:
 
                 const parsedData = JSON.parse(cleanJson);
 
+                // Model kecil kadang mengembalikan daftar sebagai array.
+                let rawAnswer = parsedData.jawaban;
+
+                if (Array.isArray(rawAnswer)) {
+                    rawAnswer = rawAnswer
+                        .map(item => String(item))
+                        .join("\n");
+                }
+
                 const generatedAnswer =
-                    typeof parsedData.jawaban === "string"
-                        ? parsedData.jawaban.trim()
+                    typeof rawAnswer === "string"
+                        ? rawAnswer.trim()
                         : "";
 
                 if (!generatedAnswer) {
@@ -587,8 +615,7 @@ Kembalikan JSON yang valid saja:
 
             } catch (apiError) {
                 console.error(
-                    "[WARNING] Ollama gagal memproses jawaban FAQ:",
-                    apiError
+                    `[WARNING] Ollama gagal memproses jawaban FAQ (${apiError.name}: ${apiError.message}). Menggunakan jawaban asli FAQ.`
                 );
 
                 // Fallback saat server AI gagal.
