@@ -76,6 +76,71 @@ const getChatResponse = async (req, res) => {
 
         const normalizedQuestion = normalizeQuestion(userMessage);
 
+        // ========================================================
+        // 1B. SAPAAN DAN UCAPAN TERIMA KASIH
+        // ========================================================
+        // Sapaan tidak memiliki entri FAQ, sehingga ditangani langsung
+        // agar tidak dijawab sebagai "informasi belum tersedia" dan tidak
+        // tercatat sebagai pertanyaan tak terjawab.
+
+        const greetingPhrases = [
+            "assalamualaikum warahmatullahi wabarakatuh",
+            "assalamualaikum wr wb",
+            "assalamualaikum",
+            "assalamu alaikum",
+            "selamat pagi", "selamat siang", "selamat sore", "selamat malam",
+            "apa kabar", "halo", "hallo", "hai", "hi", "hello", "hey",
+            "permisi", "salam", "pagi", "siang", "sore", "malam"
+        ];
+
+        const thanksPhrases = [
+            "terima kasih", "makasih", "thanks", "thank you", "trims"
+        ];
+
+        const stripPhrases = (text, phrases) => {
+            let rest = ` ${text} `;
+            let matched = false;
+
+            for (const phrase of phrases) {
+                const pattern = new RegExp(`\\s${phrase}\\s`, "g");
+
+                while (pattern.test(rest)) {
+                    matched = true;
+                    rest = rest.replace(pattern, " ");
+                    pattern.lastIndex = 0;
+                }
+            }
+
+            // Nama asisten dan kata sopan tidak dianggap sebagai pertanyaan.
+            rest = rest
+                .replace(/\b(cimal|dong|ya|kak|kakak|bang|min)\b/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            return { matched, rest };
+        };
+
+        const greetingCheck = stripPhrases(normalizedQuestion, greetingPhrases);
+        const thanksCheck = stripPhrases(normalizedQuestion, thanksPhrases);
+
+        if (greetingCheck.matched && greetingCheck.rest === "") {
+            console.log("[SMART SEARCH] Pertanyaan dikenali sebagai SAPAAN.");
+
+            return res.json({
+                response:
+                    "Halo! Saya CIMAL, asisten informasi Program Studi Teknik Informatika UISU. Ada yang ingin Anda tanyakan seputar perkuliahan?"
+            });
+        }
+
+        if (thanksCheck.matched && thanksCheck.rest === "") {
+            console.log("[SMART SEARCH] Pertanyaan dikenali sebagai TERIMA KASIH.");
+
+            return res.json({
+                response:
+                    "Sama-sama! Jika ada pertanyaan lain seputar Program Studi Teknik Informatika UISU, silakan tanyakan kepada saya."
+            });
+        }
+
         // Merapikan jawaban FAQ
         const formatAnswer = (answerData) => {
             if (Array.isArray(answerData)) {
