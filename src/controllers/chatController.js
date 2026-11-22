@@ -359,6 +359,14 @@ const getChatResponse = async (req, res) => {
                         .split(" ")
                         .filter(word => word.length > 2);
 
+                    // Jumlah kata asli pada kata kunci. Kata pendek seperti "kp"
+                    // atau "mk" dibuang dari keywordWords, sehingga kata kunci
+                    // "syarat kp" tidak boleh diperlakukan sebagai kata kunci
+                    // satu kata "syarat".
+                    const keywordTokenCount = normalizedKeyword
+                        .split(" ")
+                        .length;
+
                     let score = 0;
 
                     if (normalizedQuestion === normalizedKeyword) {
@@ -384,6 +392,7 @@ const getChatResponse = async (req, res) => {
                         ) {
                             score = 40 + coverage * 20 + matchedWords.length;
                         } else if (
+                            keywordTokenCount === 1 &&
                             keywordWords.length === 1 &&
                             matchedWords.length === 1
                         ) {
