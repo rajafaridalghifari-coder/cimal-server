@@ -139,7 +139,7 @@
             "praktikum algoritma dan pemrograman 2 (1 sks)",
             "praktikum mikroprosesor (1 sks)",
             "praktikum struktur data (1 sks)",
-            " jumlah sks semester 3 adalah 2 sks."
+            " jumlah sks semester 3 adalah 22 sks."
         ]
     },     
         {
@@ -215,6 +215,14 @@
         ]
     }, 
     {
+        "keywords": ["jumlah praktikum", "banyak praktikum", "berapa praktikum", "daftar praktikum", "praktikum apa saja", "mata kuliah praktikum"],
+        "answer": "Terdapat 13 mata kuliah praktikum dari semester 2 sampai semester 6. Semester 2 (3 praktikum): praktikum fisika, praktikum sistem digital, dan praktikum algoritma dan pemrograman 1. Semester 3 (3 praktikum): praktikum algoritma dan pemrograman 2, praktikum mikroprosesor, dan praktikum struktur data. Semester 4 (4 praktikum): praktikum pemrograman berorientasi objek, praktikum teknik kompilasi, praktikum sistem pangkalan data, dan praktikum sistem operasi. Semester 5 (2 praktikum): praktikum jaringan komputer dan praktikum kecerdasan buatan. Semester 6 (1 praktikum): praktikum pemrograman web."
+    },
+    {
+        "keywords": ["dipelajari", "belajar apa", "apa saja yang dipelajari", "apa yang dipelajari"],
+        "answer": "Di Program Studi Teknik Informatika UISU, mahasiswa mempelajari mata kuliah inti seperti algoritma, struktur data, basis data, jaringan komputer, dan pemrograman, serta mata kuliah pilihan sesuai peminatan Pemrograman, Robotika, atau Jaringan. Program studi ini mengembangkan bidang unggulan cloud computing dan soft computing. Daftar mata kuliah per semester dapat ditanyakan dengan menyebut semesternya, misalnya mata kuliah semester 1."
+    },
+    {
         "keywords": ["biaya praktikum", "uang praktikum"],
         "answer": [
             "praktikum fisika sebesar Rp. 130.000,-",
@@ -233,7 +241,7 @@
         ]
     },
        {    
-        "keywords": ["mata kuliah pilihan", "mk pilihan", "matkul pilihan"],
+        "keywords": ["mata kuliah pilihan", "mk pilihan", "matkul pilihan", "peminatan", "mata kuliah peminatan", "matkul peminatan", "mk peminatan", "peminatan robotika", "peminatan pemrograman", "peminatan jaringan"],
         "answer": [
             "matakuliah pilihan peminatan pemrograman semester 7 adalah pengolahan citra digital dan aplikasi mobile",
             "matakuliah pilihan peminatan pemrograman semester 8 adalah sistem multimedia",
@@ -255,7 +263,7 @@
             "3. mencantumkan mata kuliah Kerja Praktek dalam KRS",
             "4. lulus semua praktikum ditandai dengan surat puas praktikum ",
             "5. KP dapat dilaksanakan secara perorangan atau kelompok (maksimal 3 orang)",
-            "6. emiliki surat penerimaan/ijin pelaksanaan dari tempat KP",
+            "6. memiliki surat penerimaan/ijin pelaksanaan dari tempat KP",
             "7. dalam satu perusahaan tidak diperkenankan lebih dari 1 (satu) kelompok melakukan Kerja Praktek dengan materi yang sama pada semester yang sama ",
             "8. KP harus sesuai dengan bidang ilmu pada program studi yang bersangkutan"
         ]
@@ -349,7 +357,7 @@
             "5. Fotocopy KRS yang sedang berjalan",
             "7. Proposal skripsi dengan judul 1 dan 2 yang berisi cover, abstrak, Daftar Isi, Bab 1 sampai bab 3 dan daftar pustaka",
             "8. seluruh berkas dari poin 2 sampai 7 di scan dalam 1 pdf",
-            "(Catatan form yang harus diisi oleh mahasiswa dapat ditanyakan kepada sataff akademik yaitu Form Permohonan pengajuan judul skripsi, Lembar pengesahan judul skripsi.)",
+            "(Catatan form yang harus diisi oleh mahasiswa dapat ditanyakan kepada staf akademik yaitu Form Permohonan pengajuan judul skripsi, Lembar pengesahan judul skripsi.)",
             "SK pembimbing yang telah diterbitkan dapat diambil pada bagian administrasi (Tata Usaha Fakultas Teknik)",
             "Mahasiswa meminta Surat Pengantar untuk melakukan penelitian, jika akan melakukan penelitian/pengumpulan data pada suatau lembaga/perusahaan bersamaan denganpenyerahan proposal peneitian. ",
             "Ketua Prodi membuat surat pengantar penelitian kemudian mahasiswa menyerahkan surat pengantar penelitian tersebut kepada lembaga/perusahaan yang bersangkutan dan menerima surat balasan di izinkan.",
